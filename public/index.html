@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11140d">
+<title>Luz — הלו״ז שלא עוזב אותך</title>
+<meta name="description" content="משימות יומיות שאתה מחייב את עצמך לעשות. התראות שלא מפסיקות ואינסטגרם נעול עד שסיימת.">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Luz">
+<link rel="canonical" href="https://luz.nimrodyaroker.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Luz">
+<meta property="og:title" content="Luz — הלו״ז שלא עוזב אותך">
+<meta property="og:description" content="משימות יומיות, התראות שלא מפסיקות, ואינסטגרם נעול עד שסיימת.">
+<meta property="og:url" content="https://luz.nimrodyaroker.workers.dev/">
+<meta property="og:image" content="https://luz.nimrodyaroker.workers.dev/og-image.jpg">
+<meta property="og:image:secure_url" content="https://luz.nimrodyaroker.workers.dev/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Luz — הלו״ז שלא עוזב אותך">
+<meta property="og:locale" content="he_IL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Luz — הלו״ז שלא עוזב אותך">
+<meta name="twitter:description" content="משימות יומיות, התראות שלא מפסיקות, ואינסטגרם נעול עד שסיימת.">
+<meta name="twitter:image" content="https://luz.nimrodyaroker.workers.dev/og-image.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#11140d; --bg2:#181d12; --card:#1e2418; --card2:#262d1e;
+  --line:rgba(214,201,154,.11); --line2:rgba(214,201,154,.22);
+  --text:#e8e0c4; --muted:#968f74; --khaki:#d6c99a;
+  --olive:#8a9b3f; --olive2:#b3c45e; --olive-soft:rgba(138,155,63,.16);
+  --warn:#e2862f; --red:#c9502f; --red-soft:rgba(201,80,47,.16);
+  --r:18px; --ease:cubic-bezier(.2,.8,.2,1);
+  --head:"Secular One","Heebo",system-ui,sans-serif; --body:"Heebo",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--body);color:var(--text);background:var(--bg);font-size:17px;line-height:1.45;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* רקע: רשת מפה צבאית שזזה לאט */
+.bgfx{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 80% at 80% -10%,#232b19 0%,var(--bg) 55%)}
+.bgfx::before{content:"";position:absolute;inset:-60px;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:44px 44px;opacity:.35;animation:drift 40s linear infinite;mask-image:radial-gradient(90% 70% at 50% 20%,#000 20%,transparent 80%);-webkit-mask-image:radial-gradient(90% 70% at 50% 20%,#000 20%,transparent 80%)}
+.bgfx::after{content:"";position:absolute;width:520px;height:520px;border-radius:50%;border:1px solid var(--line);left:-180px;top:30%;box-shadow:0 0 0 60px rgba(214,201,154,.025),0 0 0 120px rgba(214,201,154,.02);animation:pulse 9s ease-in-out infinite}
+body.locked .bgfx{background:radial-gradient(120% 80% at 80% -10%,#3a1d13 0%,var(--bg) 55%)}
+@keyframes drift{to{transform:translate(44px,44px)}}
+@keyframes pulse{50%{transform:scale(1.06);opacity:.6}}
+
+.app{max-width:520px;margin:0 auto;min-height:100dvh;padding:calc(env(safe-area-inset-top) + 14px) 18px calc(env(safe-area-inset-bottom) + 96px)}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.top img{width:34px;height:34px;border-radius:9px}
+.top .brand{font-family:var(--head);font-size:22px;letter-spacing:.5px}
+.top .date{margin-inline-start:auto;color:var(--muted);font-size:14px;text-align:left}
+h2{font-family:var(--head);font-weight:400;font-size:24px;margin:6px 2px 12px}
+
+/* כרטיס מצב */
+.hero{position:relative;background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:24px;padding:18px;display:flex;align-items:center;gap:18px;overflow:hidden}
+.ring{position:relative;width:112px;height:112px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10}
+.ring .bgc{stroke:rgba(214,201,154,.1)}
+.ring .fg{stroke:var(--olive2);stroke-linecap:round;transition:stroke-dashoffset .7s var(--ease),stroke .3s}
+body.locked .ring .fg{stroke:var(--warn)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--head);font-size:30px;line-height:1}
+.ring .num small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);margin-top:4px;text-align:center}
+.hero .msg{font-family:var(--head);font-size:21px;line-height:1.2}
+.hero .sub{color:var(--muted);font-size:14px;margin-top:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 11px;border-radius:99px;font-size:13px;font-weight:700;background:var(--olive-soft);color:var(--olive2)}
+.pill.red{background:var(--red-soft);color:#f08a68;animation:blink 2.4s ease-in-out infinite}
+.pill svg.i{width:16px;height:16px}
+@keyframes blink{50%{opacity:.6}}
+
+.week{display:flex;gap:6px;margin:14px 0 18px}
+.week div{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.week b{display:block;height:8px;border-radius:4px;margin-top:5px;background:rgba(214,201,154,.1)}
+.week .ok b{background:var(--olive)}
+.week .fail b{background:var(--red)}
+.week .open b{background:repeating-linear-gradient(90deg,var(--warn) 0 6px,transparent 6px 10px)}
+.week .today{color:var(--text);font-weight:700}
+
+/* משימות */
+.list{display:flex;flex-direction:column;gap:10px}
+.task{display:flex;align-items:center;gap:14px;width:100%;text-align:right;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-height:66px;transition:transform .15s var(--ease),background .25s,border-color .25s}
+.task:active{transform:scale(.98)}
+.task .box{width:30px;height:30px;border-radius:9px;border:2px solid var(--line2);display:grid;place-items:center;flex:none;transition:.25s var(--ease)}
+.task .box svg{width:18px;height:18px;opacity:0;transform:scale(.4);transition:.25s var(--ease);stroke-width:3}
+.task .t{flex:1;min-width:0}
+.task .t b{display:block;font-weight:700;font-size:17px}
+.task .t span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.task.done{background:linear-gradient(90deg,var(--card),rgba(138,155,63,.14));border-color:rgba(138,155,63,.35)}
+.task.done .box{background:var(--olive);border-color:var(--olive);color:#11140d}
+.task.done .box svg{opacity:1;transform:none}
+.task.done .t b{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(214,201,154,.35)}
+.task.late{border-color:rgba(226,134,47,.55)}
+.task.late .t span{color:var(--warn);font-weight:700}
+.task.dont .box{border-style:dashed}
+.task.hold .box{border-color:var(--olive);border-style:solid;color:var(--olive2)}
+.task.hold .box svg{opacity:1;transform:none;stroke-width:2.4}
+.task.broke{border-color:rgba(201,80,47,.5);background:linear-gradient(90deg,var(--card),var(--red-soft))}
+.task.broke .box{background:var(--red);border-color:var(--red);color:#fff}
+.task.broke .box svg{opacity:1;transform:none}
+.sec{font-size:13px;color:var(--muted);font-weight:700;margin:18px 4px 8px;letter-spacing:.3px}
+.empty{text-align:center;color:var(--muted);padding:34px 10px}
+.empty svg.i{width:44px;height:44px;color:var(--olive);margin-bottom:10px}
+
+/* כפתורים וטפסים */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border-radius:16px;font-weight:800;font-size:17px;background:var(--olive);color:#11140d;transition:transform .15s,filter .2s}
+.btn:active{transform:scale(.98);filter:brightness(1.1)}
+.btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line2)}
+.btn.danger{background:var(--red-soft);color:#f08a68}
+.btn:disabled{opacity:.5}
+.field{display:block;margin-bottom:12px}
+.field>span{display:block;font-size:13px;color:var(--muted);margin:0 4px 6px;font-weight:500}
+.inp{width:100%;padding:15px 16px;border-radius:14px;background:var(--bg2);border:1px solid var(--line2);outline:none;font-size:17px}
+.inp:focus{border-color:var(--olive)}
+select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(-45deg,transparent 50%,var(--muted) 50%);background-position:18px 50%,24px 50%;background-size:6px 6px;background-repeat:no-repeat}
+.seg{display:flex;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;padding:11px;border-radius:10px;font-weight:700;color:var(--muted);transition:.2s}
+.seg button.on{background:var(--olive);color:#11140d}
+.seg.red button.on{background:var(--red);color:#fff}
+.days{display:flex;gap:6px}
+.days button{flex:1;aspect-ratio:1;max-height:46px;border-radius:12px;background:var(--bg2);border:1px solid var(--line2);font-weight:800;color:var(--muted);transition:.2s}
+.days button.on{background:var(--olive-soft);border-color:var(--olive);color:var(--olive2)}
+.quick{display:flex;gap:8px;margin-top:8px}
+.quick button{font-size:13px;color:var(--olive2);padding:6px 10px;border-radius:99px;background:var(--olive-soft);font-weight:700}
+.row2{display:flex;gap:10px}.row2>*{flex:1}
+.err{color:#f08a68;font-size:14px;min-height:20px;margin:4px 4px 10px}
+
+/* כרטיסי הגדרות */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:14px}
+.card h3{font-family:var(--head);font-weight:400;font-size:19px;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.card h3 svg.i{color:var(--olive2)}
+.card p{color:var(--muted);font-size:14px;margin-bottom:12px}
+.card .btn{margin-top:8px}
+.status{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--olive2);box-shadow:0 0 0 4px var(--olive-soft)}
+.mtask{display:flex;align-items:center;gap:12px;width:100%;text-align:right;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:8px}
+.mtask .t{flex:1}
+.mtask .t b{display:block;font-weight:700}
+.mtask .t span{font-size:13px;color:var(--muted)}
+.tag{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:var(--olive-soft);color:var(--olive2)}
+.tag.red{background:var(--red-soft);color:#f08a68}
+
+/* ניווט תחתון */
+.nav{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
+.nav div{pointer-events:auto;display:flex;gap:4px;background:rgba(24,29,18,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line2);border-radius:22px;padding:6px;width:100%;max-width:420px}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:16px;font-size:12px;font-weight:700;color:var(--muted);transition:.2s}
+.nav button.on{background:var(--olive-soft);color:var(--olive2)}
+.fab{position:fixed;z-index:19;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 86px);width:calc(100% - 36px);max-width:484px}
+
+/* חלון תחתון */
+.sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(5,7,3,.6);opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:41;inset-inline:0;bottom:0;margin:0 auto;max-width:520px;max-height:92dvh;overflow:auto;background:var(--bg2);border:1px solid var(--line2);border-bottom:0;border-radius:26px 26px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);transform:translateY(105%);transition:transform .35s var(--ease)}
+.sheet.on{transform:none}
+.sheet .grab{width:42px;height:5px;border-radius:3px;background:var(--line2);margin:0 auto 12px}
+.sheet h2{margin-top:0}
+.steps{list-style:none;counter-reset:s;margin:6px 0 14px}
+.steps li{counter-increment:s;position:relative;padding:0 40px 14px 0;font-size:15px}
+.steps li::before{content:counter(s);position:absolute;right:0;top:-2px;width:28px;height:28px;border-radius:9px;background:var(--olive-soft);color:var(--olive2);display:grid;place-items:center;font-weight:800;font-size:14px}
+.steps b{color:var(--khaki)}
+.copy{display:flex;gap:8px;align-items:center;background:var(--card);border:1px dashed var(--line2);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:13px;direction:ltr;word-break:break-all;color:var(--muted)}
+
+/* מסך כניסה */
+.auth{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:30px 22px calc(env(safe-area-inset-bottom) + 30px);max-width:440px;margin:0 auto}
+.auth img{width:84px;height:84px;border-radius:22px;margin:0 auto 14px;display:block;box-shadow:0 20px 40px -18px #000}
+.auth h1{font-family:var(--head);font-weight:400;font-size:40px;text-align:center;line-height:1}
+.auth .tag2{text-align:center;color:var(--muted);margin:8px 0 26px}
+.switch{text-align:center;margin-top:14px;color:var(--muted);font-size:15px}
+.switch button{color:var(--olive2);font-weight:700}
+
+.toast{position:fixed;z-index:60;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translate(-50%,-140%);background:var(--card2);border:1px solid var(--line2);padding:11px 18px;border-radius:14px;font-weight:700;font-size:15px;transition:transform .35s var(--ease);max-width:90vw;text-align:center}
+.toast.on{transform:translate(-50%,0)}
+.hidden{display:none!important}
+.fade{animation:fade .35s var(--ease)}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bgfx"></div>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16M9 15l2 2 4-4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-7 0-3-2-5.5-3.5-7-.3 2-1.5 3-2.5 3 0-3-1-6-4-8 0 4-5 6-5 12 0 4.3 3.6 7 8 7z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+
+<!-- כניסה -->
+<section id="auth" class="auth hidden">
+  <img src="/logo.svg" alt="">
+  <h1>Luz</h1>
+  <p class="tag2">הלו״ז שלא עוזב אותך עד שסיימת</p>
+  <form id="authForm" autocomplete="on">
+    <label class="field"><span>מייל</span><input class="inp" id="aEmail" type="email" inputmode="email" autocomplete="username" dir="ltr" required></label>
+    <label class="field"><span>סיסמה</span><input class="inp" id="aPass" type="password" autocomplete="current-password" dir="ltr" required minlength="6"></label>
+    <div class="err" id="aErr"></div>
+    <button class="btn" id="aBtn" type="submit">כניסה</button>
+  </form>
+  <div class="switch"><span id="aQ">עוד אין לך חשבון?</span> <button id="aSwitch" type="button">הרשמה</button></div>
+</section>
+
+<!-- האפליקציה -->
+<main id="app" class="app hidden">
+  <header class="top">
+    <img src="/logo.svg" alt="">
+    <span class="brand">Luz</span>
+    <span class="date" id="dateLbl"></span>
+  </header>
+
+  <section id="v-today" class="view">
+    <div class="hero">
+      <div class="ring"><svg viewBox="0 0 120 120"><circle class="bgc" cx="60" cy="60" r="50"/><circle class="fg" id="ringFg" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+        <div class="num"><div><span id="ringNum">0/0</span><small>בוצעו</small></div></div></div>
+      <div>
+        <div class="msg" id="heroMsg"></div>
+        <div class="sub" id="heroSub"></div>
+        <div id="heroPill"></div>
+      </div>
+    </div>
+    <div class="week" id="week"></div>
+    <div id="todayList"></div>
+  </section>
+
+  <section id="v-tasks" class="view hidden">
+    <h2>המשימות שלי</h2>
+    <div id="allList"></div>
+  </section>
+
+  <section id="v-settings" class="view hidden">
+    <h2>הגדרות</h2>
+    <div class="card">
+      <h3><svg class="i"><use href="#i-bell"/></svg>התראות שמציקות</h3>
+      <p>כל עוד יש משימה פתוחה, תקבל התראה שוב ושוב. עבר המועד של משימה – כל רבע שעה.</p>
+      <div class="status"><span class="dot" id="pushDot"></span><span id="pushLbl"></span></div>
+      <div class="row2">
+        <label class="field"><span>להתחיל משעה</span><select class="inp" id="sFrom"></select></label>
+        <label class="field"><span>כל כמה זמן</span><select class="inp" id="sEvery"><option value="15">15 דקות</option><option value="30">חצי שעה</option><option value="60">שעה</option><option value="120">שעתיים</option></select></label>
+      </div>
+      <label class="field"><span>שקט מהשעה</span><select class="inp" id="sQuiet"></select></label>
+      <button class="btn" id="pushBtn">הפעל התראות</button>
+      <button class="btn ghost hidden" id="pushTest">שלח התראת בדיקה</button>
+      <p class="hidden" id="iosNote" style="margin:12px 0 0">באייפון ההתראות עובדות רק אחרי שמוסיפים את Luz למסך הבית: בספארי לוחצים על <b>שיתוף</b> ואז <b>הוסף למסך הבית</b>, ופותחים מהאייקון.</p>
+    </div>
+    <div class="card">
+      <h3><svg class="i"><use href="#i-lock"/></svg>נעילת אינסטגרם וטיקטוק</h3>
+      <p>כשתפתח אחת מהן ויש משימות פתוחות – ייפתח לך Luz במקומה. מגדירים פעם אחת באפליקציה "קיצורים".</p>
+      <label class="field"><span>הנעילה מתחילה משעה</span><select class="inp" id="sBlock"></select></label>
+      <button class="btn" id="gateBtn">איך מגדירים (2 דקות)</button>
+    </div>
+    <div class="card">
+      <h3><svg class="i"><use href="#i-user"/></svg>חשבון</h3>
+      <p id="meEmail" dir="ltr" style="text-align:right"></p>
+      <button class="btn ghost" id="pwBtn">החלפת סיסמה</button>
+      <button class="btn danger" id="logoutBtn">יציאה</button>
+    </div>
+  </section>
+</main>
+
+<button class="btn fab hidden" id="addBtn"><svg class="i"><use href="#i-plus"/></svg>משימה חדשה</button>
+
+<nav class="nav hidden" id="nav"><div>
+  <button data-v="today" class="on"><svg class="i"><use href="#i-today"/></svg>היום</button>
+  <button data-v="tasks"><svg class="i"><use href="#i-list"/></svg>משימות</button>
+  <button data-v="settings"><svg class="i"><use href="#i-gear"/></svg>הגדרות</button>
+</div></nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const icon = (n) => `<svg class="i"><use href="#i-${n}"/></svg>`;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hh = (h) => String(h).padStart(2, '0') + ':00';
+let token = null, S = null, view = 'today', signup = false;
+try { token = localStorage.getItem('luz_token'); } catch {}
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, {
+    method: opts.method || (opts.body ? 'POST' : 'GET'),
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  let data = {}; try { data = await res.json(); } catch {}
+  if (res.status === 401 && token) { logout(true); throw new Error('צריך להתחבר'); }
+  if (!res.ok) throw new Error(data.error || 'משהו נכשל. נסה שוב');
+  return data;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2400); }
+function setToken(t) { token = t; try { t ? localStorage.setItem('luz_token', t) : localStorage.removeItem('luz_token'); } catch {} }
+
+// ---------- כניסה ----------
+function showAuth() {
+  $('#auth').classList.remove('hidden');
+  ['#app', '#nav', '#addBtn'].forEach(s => $(s).classList.add('hidden'));
+}
+$('#aSwitch').onclick = () => {
+  signup = !signup;
+  $('#aBtn').textContent = signup ? 'יצירת חשבון' : 'כניסה';
+  $('#aQ').textContent = signup ? 'כבר יש לך חשבון?' : 'עוד אין לך חשבון?';
+  $('#aSwitch').textContent = signup ? 'כניסה' : 'הרשמה';
+  $('#aPass').autocomplete = signup ? 'new-password' : 'current-password';
+  $('#aErr').textContent = '';
+};
+$('#authForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const b = $('#aBtn'); b.disabled = true; $('#aErr').textContent = '';
+  try {
+    const r = await api(signup ? '/signup' : '/login', { body: { email: $('#aEmail').value, password: $('#aPass').value } });
+    setToken(r.token); await load(); if (signup) setTimeout(() => editTask(null), 400);
+  } catch (err) { $('#aErr').textContent = err.message; }
+  b.disabled = false;
+};
+async function logout(silent) {
+  if (!silent) { try { await api('/logout', { body: {} }); } catch {} }
+  setToken(null); S = null; showAuth();
+}
+
+// ---------- טעינה ----------
+async function load() {
+  S = await api('/state');
+  $('#auth').classList.add('hidden');
+  ['#app', '#nav'].forEach(s => $(s).classList.remove('hidden'));
+  render();
+}
+function render() {
+  if (!S) return;
+  document.body.classList.toggle('locked', S.today.locked);
+  const d = new Date(S.today.day + 'T12:00:00');
+  $('#dateLbl').textContent = `יום ${DAY_NAMES[S.today.dow]}, ${d.getDate()}.${d.getMonth() + 1}`;
+  renderToday(); renderTasks(); renderSettings();
+  $('#addBtn').classList.toggle('hidden', view !== 'tasks');
+}
+
+function taskState(t) {
+  const c = S.today.checks[t.id];
+  if (t.kind === 'do') return c === 'done' ? 'done' : (t.by_hour != null && S.today.hour >= t.by_hour ? 'late' : 'open');
+  return c === 'broke' ? 'broke' : 'hold';
+}
+function renderToday() {
+  const tasks = S.today.tasks, dos = tasks.filter(t => t.kind === 'do'), donts = tasks.filter(t => t.kind === 'dont');
+  const done = dos.filter(t => taskState(t) === 'done').length, open = dos.length - done;
+  const broke = donts.filter(t => taskState(t) === 'broke').length;
+  $('#ringNum').textContent = `${done}/${dos.length}`;
+  $('#ringFg').style.strokeDashoffset = 314.16 * (1 - (dos.length ? done / dos.length : tasks.length ? 1 : 0));
+  let msg, pill = '';
+  if (!tasks.length) msg = 'אין משימות להיום';
+  else if (open === 0 && !broke) { msg = 'יום נקי. אתה חופשי.'; pill = `<span class="pill">${icon('check')}הכל פתוח</span>`; }
+  else if (open === 0) msg = 'סיימת – אבל נשברת במשהו';
+  else msg = open === 1 ? 'נשארה משימה אחת' : `נשארו ${open} משימות`;
+  if (S.today.locked) pill = `<span class="pill red">${icon('lock')}אפליקציות נעולות</span>`;
+  $('#heroMsg').textContent = msg;
+  $('#heroSub').innerHTML = `${icon('fire').replace('class="i"', 'class="i" style="width:15px;height:15px;vertical-align:-2px;color:var(--warn)"')} רצף ${S.streak} ${S.streak === 1 ? 'יום' : 'ימים'} · שיא ${S.best}`;
+  $('#heroPill').innerHTML = pill;
+  $('#week').innerHTML = S.week.map((w, i) => `<div class="${w.s} ${i === 6 ? 'today' : ''}">${DAYS[w.dow]}<b></b></div>`).join('');
+  const el = $('#todayList');
+  if (!tasks.length) {
+    el.innerHTML = `<div class="empty">${icon('today')}<div>${S.tasks.length ? 'היום אין לך משימות. תהנה.' : 'עוד לא הגדרת משימות.'}</div></div>` +
+      (S.tasks.length ? '' : `<button class="btn" id="firstAdd">${icon('plus')}הוסף משימה ראשונה</button>`);
+    const fa = $('#firstAdd'); if (fa) fa.onclick = () => editTask(null);
+    return;
+  }
+  const row = (t) => {
+    const st = taskState(t);
+    const sub = t.kind === 'dont' ? (st === 'broke' ? 'נשברת היום. מחר מתחילים מחדש' : 'מחזיק מעמד. לחץ אם נשברת')
+      : st === 'late' ? `היה צריך עד ${hh(t.by_hour)}` : t.by_hour != null ? `עד ${hh(t.by_hour)}` : st === 'done' ? 'בוצע' : 'לחץ כשסיימת';
+    const ic = t.kind === 'dont' ? (st === 'broke' ? 'x' : 'shield') : 'check';
+    return `<button class="task fade ${t.kind} ${st}" data-id="${t.id}"><span class="box">${icon(ic)}</span><span class="t"><b>${esc(t.title)}</b><span>${sub}</span></span></button>`;
+  };
+  const openFirst = [...dos].sort((a, b) => (taskState(a) === 'done') - (taskState(b) === 'done'));
+  el.innerHTML = (dos.length ? `<div class="sec">לעשות</div><div class="list">${openFirst.map(row).join('')}</div>` : '') +
+    (donts.length ? `<div class="sec">לא לעשות</div><div class="list">${donts.map(row).join('')}</div>` : '');
+  el.querySelectorAll('.task').forEach(b => b.onclick = () => toggle(b.dataset.id));
+}
+async function toggle(id) {
+  const t = S.today.tasks.find(x => x.id === id), st = taskState(t);
+  if (t.kind === 'dont' && st === 'hold') return confirmBroke(t);
+  const status = st === 'done' || st === 'broke' ? null : 'done';
+  S.today.checks[id] = status || undefined; if (!status) delete S.today.checks[id];
+  renderToday(); if (status === 'done' && navigator.vibrate) navigator.vibrate(15);
+  try { S = await api('/check', { body: { task: id, status } }); render(); if (status && !S.today.locked && wasLast()) toast('זהו. סיימת להיום.'); }
+  catch (e) { toast(e.message); load().catch(() => {}); }
+}
+const wasLast = () => S.today.tasks.filter(t => t.kind === 'do').every(t => S.today.checks[t.id] === 'done');
+function confirmBroke(t) {
+  openSheet(`<h2>נשברת ב"${esc(t.title)}"?</h2><p style="color:var(--muted);margin-bottom:16px">זה ישבור את הרצף של היום. כנות זה חלק מהעניין.</p>
+    <button class="btn danger" id="yb">כן, נשברתי</button><button class="btn ghost" style="margin-top:8px" id="nb">לא, אני מחזיק</button>`);
+  $('#nb').onclick = closeSheet;
+  $('#yb').onclick = async () => { closeSheet(); try { S = await api('/check', { body: { task: t.id, status: 'broke' } }); render(); } catch (e) { toast(e.message); } };
+}
+
+// ---------- ניהול משימות ----------
+const daysLabel = (d) => d === '0123456' ? 'כל יום' : d === '01234' ? 'א׳–ה׳' : d.split('').map(x => DAYS[x]).join(' ');
+function renderTasks() {
+  const el = $('#allList');
+  if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
+  el.innerHTML = S.tasks.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${daysLabel(t.days)}${t.by_hour != null ? ' · עד ' + hh(t.by_hour) : ''}</span></span>
+    <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('');
+  el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
+}
+function editTask(t) {
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.days || '0123456', by: t?.by_hour ?? '' };
+  const hours = ['<option value="">בלי שעה</option>'].concat(Array.from({ length: 19 }, (_, i) => `<option value="${i + 5}">עד ${hh(i + 5)}</option>`)).join('');
+  openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
+    <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
+    <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
+    <div class="field"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
+      <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
+    <label class="field" id="fByWrap"><span>עד איזו שעה (אחריה ההתראות מתגברות)</span><select class="inp" id="fBy">${hours}</select></label>
+    <div class="err" id="fErr"></div>
+    <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
+    ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
+  const draw = () => {
+    document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
+    $('#fKind').classList.toggle('red', f.kind === 'dont');
+    document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
+    $('#fByWrap').classList.toggle('hidden', f.kind === 'dont');
+  };
+  $('#fBy').value = String(f.by);
+  document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
+  document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
+    const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
+  });
+  document.querySelectorAll('.quick button').forEach(b => b.onclick = () => { f.days = b.dataset.q; draw(); });
+  draw();
+  if (!t) setTimeout(() => $('#fTitle').focus(), 350);
+  $('#fSave').onclick = async () => {
+    const body = { title: $('#fTitle').value, kind: f.kind, days: f.days, by_hour: $('#fBy').value === '' ? null : Number($('#fBy').value) };
+    try { S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render(); toast(t ? 'נשמר' : 'נוספה משימה'); }
+    catch (e) { $('#fErr').textContent = e.message; }
+  };
+  if (t) $('#fDel').onclick = async () => {
+    if (!confirmDel.armed) { confirmDel.armed = true; $('#fDel').textContent = 'לחץ שוב למחיקה'; setTimeout(() => confirmDel.armed = false, 3000); return; }
+    confirmDel.armed = false;
+    try { S = await api('/tasks/' + t.id, { method: 'DELETE' }); closeSheet(); render(); toast('נמחקה'); } catch (e) { toast(e.message); }
+  };
+}
+const confirmDel = {};
+
+// ---------- הגדרות ----------
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const pushOK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+function opts(sel, from, to, fmt) { $(sel).innerHTML = Array.from({ length: to - from + 1 }, (_, i) => `<option value="${from + i}">${fmt(from + i)}</option>`).join(''); }
+opts('#sFrom', 5, 22, hh); opts('#sQuiet', 18, 24, h => h === 24 ? 'אף פעם' : hh(h)); opts('#sBlock', 0, 22, h => h === 0 ? 'כל היום' : hh(h));
+function renderSettings() {
+  const m = S.me;
+  $('#sFrom').value = m.remind_from; $('#sEvery').value = m.remind_every; $('#sQuiet').value = m.quiet_from; $('#sBlock').value = m.block_from;
+  $('#meEmail').textContent = m.email;
+  const on = pushOK && Notification.permission === 'granted' && m.pushCount > 0;
+  $('#pushDot').classList.toggle('on', on);
+  $('#pushLbl').textContent = on ? 'התראות פעילות במכשיר' : (pushOK ? 'התראות כבויות' : (isIOS && !standalone ? 'צריך קודם להוסיף למסך הבית' : 'הדפדפן הזה לא תומך בהתראות'));
+  $('#pushBtn').classList.toggle('hidden', on || !pushOK);
+  $('#pushTest').classList.toggle('hidden', !on);
+  $('#iosNote').classList.toggle('hidden', !(isIOS && !standalone));
+}
+['#sFrom', '#sEvery', '#sQuiet', '#sBlock'].forEach(s => $(s).onchange = async () => {
+  try { S = await api('/settings', { body: { remind_from: +$('#sFrom').value, remind_every: +$('#sEvery').value, quiet_from: +$('#sQuiet').value, block_from: +$('#sBlock').value } }); render(); toast('נשמר'); }
+  catch (e) { toast(e.message); }
+});
+async function enablePush() {
+  try {
+    if (await Notification.requestPermission() !== 'granted') return toast('צריך לאשר התראות כדי שזה יעבוד');
+    const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
+    const { key } = await api('/push/key');
+    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)), c => c.charCodeAt(0));
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+    await api('/push/subscribe', { body: { sub: sub.toJSON() } });
+    await load(); toast('התראות הופעלו');
+    api('/push/test', { body: {} }).catch(() => {});
+  } catch (e) { toast(e.message || 'לא הצלחתי להפעיל התראות'); }
+}
+$('#pushBtn').onclick = enablePush;
+$('#pushTest').onclick = async () => { try { const r = await api('/push/test', { body: {} }); toast(r.sent ? 'נשלחה' : 'לא נשלחה – נסה להפעיל מחדש'); } catch (e) { toast(e.message); } };
+// אם ההתראות כבר מאושרות, מוודאים שהמכשיר רשום
+async function syncPush() {
+  if (!pushOK || Notification.permission !== 'granted' || !S || S.me.pushCount) return;
+  try { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) { await api('/push/subscribe', { body: { sub: sub.toJSON() } }); load(); } } catch {}
+}
+$('#gateBtn').onclick = () => {
+  const url = location.origin + '/api/gate/' + S.me.gate;
+  openSheet(`<h2>נעילת אפליקציות</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:12px">קודם מעתיקים את הקישור האישי שלך (אל תשתף אותו):</p>
+    <div class="copy"><span style="flex:1">${esc(url)}</span></div>
+    <button class="btn ghost" id="cpy">${icon('copy')}העתק קישור</button>
+    <ol class="steps" style="margin-top:18px">
+      <li>פתח את האפליקציה <b>קיצורים</b>, למטה <b>אוטומציה</b>, ואז <b>+</b> למעלה.</li>
+      <li>בחר <b>אפליקציה</b>, לחץ <b>בחר</b>, סמן <b>Instagram</b> ו-<b>TikTok</b> ולחץ <b>בוצע</b>. השאר מסומן <b>נפתחה</b>, בחר <b>הפעל מיד</b> ולחץ <b>הבא</b>.</li>
+      <li>בחר <b>אוטומציה ריקה חדשה</b>. בשורת החיפוש כתוב <b>קבל תוכן של URL</b> ולחץ עליו. לחץ על המילה <b>URL</b> והדבק את הקישור שהעתקת.</li>
+      <li>חפש <b>אם</b> ולחץ עליו. לחץ על <b>תנאי</b>, בחר <b>מכיל</b>, ובמקום הטקסט כתוב <b>locked</b>.</li>
+      <li>חפש <b>פתח URL</b>, לחץ עליו, וגרור אותו לתוך ה"אם" (מתחת לשורה של "אם"). בתוכו כתוב: <b dir="ltr">${esc(location.origin)}</b></li>
+      <li>לחץ <b>בוצע</b>. זהו – מעכשיו כל עוד יש משימה פתוחה, אינסטגרם יפתח את Luz.</li>
+    </ol>
+    <button class="btn danger" id="gReset">החלף קישור (אם שיתפת בטעות)</button>`);
+  $('#cpy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('הועתק'); } catch { toast('לא הצלחתי להעתיק – סמן והעתק ידנית'); } };
+  $('#gReset').onclick = async () => { try { S = await api('/gate/reset', { body: {} }); closeSheet(); toast('קישור חדש נוצר – צריך לעדכן בקיצורים'); } catch (e) { toast(e.message); } };
+};
+$('#pwBtn').onclick = () => {
+  openSheet(`<h2>החלפת סיסמה</h2>
+    <label class="field"><span>סיסמה נוכחית</span><input class="inp" id="pOld" type="password" autocomplete="current-password" dir="ltr"></label>
+    <label class="field"><span>סיסמה חדשה</span><input class="inp" id="pNew" type="password" autocomplete="new-password" dir="ltr"></label>
+    <div class="err" id="pErr"></div><button class="btn" id="pSave">שמירה</button>`);
+  $('#pSave').onclick = async () => {
+    try { await api('/password', { body: { old: $('#pOld').value, password: $('#pNew').value } }); closeSheet(); toast('הסיסמה הוחלפה'); }
+    catch (e) { $('#pErr').textContent = e.message; }
+  };
+};
+$('#logoutBtn').onclick = () => logout();
+
+// ---------- ניווט וחלון ----------
+document.querySelectorAll('.nav button').forEach(b => b.onclick = () => {
+  view = b.dataset.v;
+  document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('hidden', v.id !== 'v-' + view));
+  $('#addBtn').classList.toggle('hidden', view !== 'tasks');
+  scrollTo(0, 0);
+});
+$('#addBtn').onclick = () => editTask(null);
+function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').classList.add('on'); $('#sheetBg').classList.add('on'); }
+function closeSheet() { $('#sheet').classList.remove('on'); $('#sheetBg').classList.remove('on'); }
+$('#sheetBg').onclick = closeSheet;
+
+// רענון כשחוזרים לאפליקציה (למשל אחרי חצות או מהתראה)
+document.addEventListener('visibilitychange', () => { if (!document.hidden && token) load().catch(() => {}); });
+setInterval(() => { if (!document.hidden && token) load().catch(() => {}); }, 120000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+(async () => {
+  if (!token) return showAuth();
+  try { await load(); syncPush(); } catch { if (!token) showAuth(); else { showAuth(); $('#aErr').textContent = 'אין חיבור. נסה לרענן'; } }
+})();
+</script>
+</body>
+</html>
