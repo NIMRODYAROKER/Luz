@@ -458,12 +458,6 @@ const todayStr = () => S?.today?.day || new Date().toISOString().slice(0, 10);
 const dateLabel = (d) => { const x = new Date(d + 'T12:00:00Z'); return d === todayStr() ? 'היום' : `יום ${DAYS[x.getUTCDay()]}׳ ${x.getUTCDate()}.${x.getUTCMonth() + 1}`; };
 // קובץ אירוע ליומן של האייפון – האייפון שואל אם להוסיף אותו ללוח השנה
 const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_day, ...(t.by_min != null ? { m: t.by_min } : {}) });
-function offerCalendar(t) {
-  openSheet(`<h2>להוסיף ליומן?</h2><p style="color:var(--muted);margin-bottom:16px">"${esc(t.title)}" – ${dateLabel(t.on_day)}${t.by_min != null ? ' בשעה ' + hm(t.by_min) : ' (כל היום)'}. האייפון יפתח את לוח השנה ותלחץ שם "הוסף".</p>
-    <a class="btn" href="${calUrl(t)}" id="calGo">${icon('today')}הוסף ליומן באייפון</a>
-    <button class="btn ghost" style="margin-top:8px" id="calNo">לא עכשיו</button>`);
-  $('#calGo').onclick = () => setTimeout(closeSheet, 300); $('#calNo').onclick = closeSheet;
-}
 const freqLabel = (t) => t.on_day ? 'חד פעמי · ' + dateLabel(t.on_day) : t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
@@ -479,6 +473,7 @@ function editTask(t) {
     <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
     <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
     <label class="field" id="fDateWrap"><span>באיזה תאריך</span><input class="inp" type="date" id="fDate" min="${todayStr()}" value="${t?.on_day || todayStr()}"></label>
+    ${t ? '' : '<div class="field" id="fCalWrap"><span>להוסיף גם ליומן באייפון?</span><div class="seg" id="fCal"><button data-c="0">לא</button><button data-c="1">כן</button></div></div>'}
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
     <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6, 7].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
@@ -501,6 +496,7 @@ function editTask(t) {
     document.querySelectorAll('#fN button').forEach(b => b.classList.toggle('on', +b.dataset.n === f.n));
     $('#fDaysWrap').classList.toggle('hidden', wk || once);
     $('#fDateWrap').classList.toggle('hidden', !once);
+    if ($('#fCalWrap')) { $('#fCalWrap').classList.toggle('hidden', !once); document.querySelectorAll('#fCal button').forEach(b => b.classList.toggle('on', +b.dataset.c === +!!f.cal)); }
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
@@ -508,6 +504,7 @@ function editTask(t) {
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   document.querySelectorAll('#fN button').forEach(b => b.onclick = () => { f.n = +b.dataset.n; draw(); });
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
+  document.querySelectorAll('#fCal button').forEach(b => b.onclick = () => { f.cal = b.dataset.c === '1'; draw(); });
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
     const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
   });
@@ -523,8 +520,8 @@ function editTask(t) {
     const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by, on_day };
     try {
       S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render();
-      const changed = once && (!t || t.on_day !== on_day || t.by_min !== by || t.title !== body.title.trim());
-      if (changed) { const nt = [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' ')); if (nt) return setTimeout(() => offerCalendar(nt), 350); }
+      // רק אם בחר "כן" – פותח את לוח השנה של האייפון
+      if (once && !t && f.cal) { const nt = [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' ')); if (nt) { toast('נוספה משימה'); return setTimeout(() => { location.href = calUrl(nt); }, 300); } }
       toast(t ? 'נשמר' : 'נוספה משימה');
     }
     catch (e) { $('#fErr').textContent = e.message; }
