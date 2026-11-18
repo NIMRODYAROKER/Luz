@@ -142,6 +142,12 @@ export class LuzDB extends DurableObject {
       CREATE INDEX IF NOT EXISTS checks_user ON checks(user_id, day);
       CREATE INDEX IF NOT EXISTS subs_user ON subs(user_id);
     `);
+    // עמודות חדשות: שעה עם דקות, X פעמים בשבוע. ממלאים מהנתונים הקיימים בלי למחוק כלום
+    const addCol = (tbl, def, fill) => { try { this.sql.exec(`ALTER TABLE ${tbl} ADD COLUMN ${def}`); if (fill) this.sql.exec(fill); } catch {} };
+    addCol('tasks', 'by_min INTEGER', 'UPDATE tasks SET by_min = by_hour * 60 WHERE by_hour IS NOT NULL');
+    addCol('tasks', 'per_week INTEGER');
+    addCol('users', 'remind_min INTEGER NOT NULL DEFAULT 540', 'UPDATE users SET remind_min = remind_from * 60');
+    addCol('users', 'quiet_min INTEGER NOT NULL DEFAULT 1380', 'UPDATE users SET quiet_min = quiet_from * 60');
     this.sql.exec('DELETE FROM sessions WHERE created < ?', Date.now() - SESSION_DAYS * 864e5);
   }
   secLog(kind, who, ip) {
@@ -169,17 +175,25 @@ export class LuzDB extends DurableObject {
   newSession(uid) { const t = randomId(24); this.sql.exec('INSERT INTO sessions (token, user_id, created) VALUES (?, ?, ?)', t, uid, Date.now()); return t; }
 
   // ---------- לוגיקה של יום ----------
+  // משימה של X פעמים בשבוע מופיעה כל יום עד שהשלמת את המכסה (השבוע מתחיל בראשון).
+  // היא "חובה היום" רק כשנשארו בדיוק כמה ימים כמו הפעמים שחסרות.
   tasksOn(uid, day) {
-    const dow = String(dowOf(day));
+    const dow = dowOf(day), ws = addDays(day, -dow);
     return this.q('SELECT * FROM tasks WHERE user_id = ? AND from_day <= ? AND (to_day IS NULL OR to_day > ?) ORDER BY sort, created', uid, day, day)
-      .filter(t => t.days.includes(dow));
+      .filter(t => {
+        if (!t.per_week) return t.days.includes(String(dow));
+        t.before = this.one("SELECT COUNT(*) AS c FROM checks WHERE task_id = ? AND status = 'done' AND day >= ? AND day < ?", t.id, ws, day).c;
+        if (t.before >= t.per_week) return false;
+        t.must = t.per_week - t.before >= 7 - dow;
+        return true;
+      });
   }
   checksOn(uid, day) {
     const m = {}; for (const c of this.q('SELECT task_id, status FROM checks WHERE user_id = ? AND day = ?', uid, day)) m[c.task_id] = c.status; return m;
   }
   dayResult(uid, day) {
     const tasks = this.tasksOn(uid, day), checks = this.checksOn(uid, day);
-    const open = tasks.filter(t => t.kind === 'do' && checks[t.id] !== 'done');
+    const open = tasks.filter(t => t.kind === 'do' && checks[t.id] !== 'done' && (!t.per_week || t.must));
     const broke = tasks.filter(t => t.kind === 'dont' && checks[t.id] === 'broke');
     return { tasks, checks, open, broke, ok: !open.length && !broke.length, empty: !tasks.length };
   }
@@ -200,9 +214,8 @@ export class LuzDB extends DurableObject {
   }
   locked(u, l = local()) {
     const r = this.dayResult(u.id, l.day);
-    if (!r.open.length) return false;
-    // חסום מהשעה שנקבעה, או מוקדם יותר אם עבר המועד של משימה פתוחה
-    return l.hour >= u.block_from || r.open.some(t => t.by_hour != null && l.hour >= t.by_hour);
+    // חסום רק כשעבר המועד של משימה שלא סומנה. משימה בלי שעה לא חוסמת
+    return r.open.some(t => t.by_min != null && l.min >= t.by_min);
   }
   kvGet(k) { return this.one('SELECT v FROM kv WHERE k = ?', k)?.v ?? null; }
   kvSet(k, v) { this.sql.exec('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v', k, v); }
@@ -219,9 +232,10 @@ export class LuzDB extends DurableObject {
       week.push({ day: d, dow: dowOf(d), s: x.empty ? 'none' : x.ok ? 'ok' : i === 0 ? 'open' : 'fail' });
     }
     return {
-      me: { email: u.email, gate: u.gate_key, remind_from: u.remind_from, remind_every: u.remind_every, quiet_from: u.quiet_from, block_from: u.block_from,
+      me: { email: u.email, gate: u.gate_key, remind_min: u.remind_min, remind_every: u.remind_every, quiet_min: u.quiet_min,
         pushCount: this.one('SELECT COUNT(*) AS c FROM subs WHERE user_id = ?', u.id).c },
-      today: { day: l.day, dow: l.dow, hour: l.hour, tasks: r.tasks.map(pubTask), checks: r.checks, locked: this.locked(u, l) },
+      today: { day: l.day, dow: l.dow, hour: l.hour, min: l.min, checks: r.checks, locked: this.locked(u, l),
+        tasks: r.tasks.map(t => ({ ...pubTask(t), ...(t.per_week ? { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
       tasks: all.map(pubTask), week, ...this.streak(u)
     };
   }
@@ -258,12 +272,12 @@ export class LuzDB extends DurableObject {
   async cron() {
     const l = local(), now = Date.now();
     for (const u of this.q('SELECT u.* FROM users u WHERE EXISTS (SELECT 1 FROM subs s WHERE s.user_id = u.id)')) {
-      if (l.hour >= u.quiet_from || l.hour < Math.min(u.remind_from, 7)) continue;
+      if (l.min >= u.quiet_min || l.min < Math.min(u.remind_min, 420)) continue;
       const r = this.dayResult(u.id, l.day);
       if (!r.open.length) continue;
-      const late = r.open.filter(t => t.by_hour != null && l.hour >= t.by_hour);
+      const late = r.open.filter(t => t.by_min != null && l.min >= t.by_min);
       const every = late.length ? Math.min(15, u.remind_every) : u.remind_every;
-      if (!late.length && l.hour < u.remind_from) continue;
+      if (!late.length && l.min < u.remind_min) continue;
       if (now - u.last_push < every * 60e3 - 60e3) continue;
       const names = (late.length ? late : r.open).slice(0, 3).map(t => t.title).join(', ');
       const msg = late.length
@@ -341,8 +355,8 @@ export class LuzDB extends DurableObject {
       const t = cleanTask(body);
       if (this.one('SELECT COUNT(*) AS c FROM tasks WHERE user_id = ? AND to_day IS NULL', u.id).c >= MAX_TASKS) bad('יותר מדי משימות');
       const maxSort = this.one('SELECT MAX(sort) AS s FROM tasks WHERE user_id = ?', u.id).s || 0;
-      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, by_hour, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        randomId(9), u.id, t.title, t.kind, t.days, t.by_hour, maxSort + 1, local().day, Date.now());
+      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        randomId(9), u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, maxSort + 1, local().day, Date.now());
       return json(this.state(u));
     }
     m = path.match(/^\/api\/tasks\/([A-Za-z0-9_-]{6,20})$/);
@@ -358,14 +372,14 @@ export class LuzDB extends DurableObject {
       }
       if (method === 'PUT') {
         const t = cleanTask(body);
-        if (task.from_day >= today || (t.kind === task.kind && t.days === task.days)) {
-          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, by_hour = ? WHERE id = ?', t.title, t.kind, t.days, t.by_hour, task.id);
+        if (task.from_day >= today || (t.kind === task.kind && t.days === task.days && t.per_week === (task.per_week ?? null))) {
+          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, per_week = ?, by_hour = ?, by_min = ? WHERE id = ?', t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, task.id);
         } else {
           // שינוי ימים/סוג חל מהיום והלאה, בלי לשנות את העבר
           const nid = randomId(9);
           this.sql.exec('UPDATE tasks SET to_day = ? WHERE id = ?', today, task.id);
-          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, by_hour, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            nid, u.id, t.title, t.kind, t.days, t.by_hour, task.sort, today, Date.now());
+          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, task.sort, today, Date.now());
           this.sql.exec('UPDATE checks SET task_id = ? WHERE task_id = ? AND day = ?', nid, task.id, today);
         }
         return json(this.state(u));
@@ -383,9 +397,10 @@ export class LuzDB extends DurableObject {
       return json(this.state(u));
     }
     if (path === '/api/settings' && method === 'POST') {
-      this.sql.exec('UPDATE users SET remind_from = ?, remind_every = ?, quiet_from = ?, block_from = ? WHERE id = ?',
-        intIn(body.remind_from, 5, 22, u.remind_from), [15, 30, 60, 120].includes(Number(body.remind_every)) ? Number(body.remind_every) : u.remind_every,
-        intIn(body.quiet_from, 18, 24, u.quiet_from), intIn(body.block_from, 0, 22, u.block_from), u.id);
+      const rm = intIn(body.remind_min, 0, 1439, u.remind_min), qm = intIn(body.quiet_min, 0, 1440, u.quiet_min);
+      if (qm <= rm) bad('שעת השקט צריכה להיות אחרי שעת ההתחלה');
+      this.sql.exec('UPDATE users SET remind_min = ?, remind_every = ?, quiet_min = ? WHERE id = ?',
+        rm, [15, 30, 60, 120].includes(Number(body.remind_every)) ? Number(body.remind_every) : u.remind_every, qm, u.id);
       return json(this.state(this.one('SELECT * FROM users WHERE id = ?', u.id)));
     }
     if (path === '/api/push/key' && method === 'GET') return json({ key: (await this.vapid()).pub });
@@ -429,9 +444,13 @@ function cleanTask(b) {
   const title = norm(b.title, 50);
   if (!title) bad('כתוב מה המשימה');
   const kind = b.kind === 'dont' ? 'dont' : 'do';
-  const days = [...new Set(String(b.days ?? '').split('').filter(c => /[0-6]/.test(c)))].sort().join('');
+  const per_week = kind === 'do' && b.per_week != null && b.per_week !== '' ? intIn(b.per_week, 1, 6, null) : null;
+  if (kind === 'do' && b.per_week != null && b.per_week !== '' && !per_week) bad('בחר כמה פעמים בשבוע');
+  const days = per_week ? '0123456' : [...new Set(String(b.days ?? '').split('').filter(c => /[0-6]/.test(c)))].sort().join('');
   if (!days) bad('בחר לפחות יום אחד');
-  const by_hour = b.by_hour === null || b.by_hour === '' || b.by_hour === undefined ? null : intIn(b.by_hour, 5, 23, null);
-  return { title, kind, days, by_hour: kind === 'do' ? by_hour : null };
+  let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
+  if (by_min === -1) bad('השעה לא תקינה');
+  if (kind !== 'do') by_min = null;
+  return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60) };
 }
-const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, by_hour: t.by_hour });
+const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null });

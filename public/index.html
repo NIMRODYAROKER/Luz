@@ -136,6 +136,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .days button{flex:1;aspect-ratio:1;max-height:46px;border-radius:12px;background:var(--bg2);border:1px solid var(--line2);font-weight:800;color:var(--muted);transition:.2s}
 .days button.on{background:var(--olive-soft);border-color:var(--olive);color:var(--olive2)}
 .quick{display:flex;gap:8px;margin-top:8px}
+.inp.time{direction:ltr;text-align:right;letter-spacing:1px}
 .quick button{font-size:13px;color:var(--olive2);padding:6px 10px;border-radius:99px;background:var(--olive-soft);font-weight:700}
 .row2{display:flex;gap:10px}.row2>*{flex:1}
 .err{color:#f08a68;font-size:14px;min-height:20px;margin:4px 4px 10px}
@@ -259,18 +260,17 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
       <p>כל עוד יש משימה פתוחה, תקבל התראה שוב ושוב. עבר המועד של משימה – כל רבע שעה.</p>
       <div class="status"><span class="dot" id="pushDot"></span><span id="pushLbl"></span></div>
       <div class="row2">
-        <label class="field"><span>להתחיל משעה</span><select class="inp" id="sFrom"></select></label>
+        <label class="field"><span>להתחיל משעה</span><input class="inp time" id="sFrom" inputmode="numeric" maxlength="5" placeholder="09:00"></label>
         <label class="field"><span>כל כמה זמן</span><select class="inp" id="sEvery"><option value="15">15 דקות</option><option value="30">חצי שעה</option><option value="60">שעה</option><option value="120">שעתיים</option></select></label>
       </div>
-      <label class="field"><span>שקט מהשעה</span><select class="inp" id="sQuiet"></select></label>
+      <label class="field"><span>שקט מהשעה (ריק = אף פעם)</span><input class="inp time" id="sQuiet" inputmode="numeric" maxlength="5" placeholder="23:00"></label>
       <button class="btn" id="pushBtn">הפעל התראות</button>
       <button class="btn ghost hidden" id="pushTest">שלח התראת בדיקה</button>
       <p class="hidden" id="iosNote" style="margin:12px 0 0">באייפון ההתראות עובדות רק אחרי שמוסיפים את Luz למסך הבית: בספארי לוחצים על <b>שיתוף</b> ואז <b>הוסף למסך הבית</b>, ופותחים מהאייקון.</p>
     </div>
     <div class="card">
       <h3><svg class="i"><use href="#i-lock"/></svg>נעילת אינסטגרם וטיקטוק</h3>
-      <p>כשתפתח אחת מהן ויש משימות פתוחות – ייפתח לך Luz במקומה. מגדירים פעם אחת באפליקציה "קיצורים".</p>
-      <label class="field"><span>הנעילה מתחילה משעה</span><select class="inp" id="sBlock"></select></label>
+      <p>ברגע שעבר המועד של משימה שלא סימנת – כשתפתח אחת מהן ייפתח לך Luz במקומה. משימה בלי שעה לא נועלת. מגדירים פעם אחת באפליקציה "קיצורים".</p>
       <button class="btn" id="gateBtn">איך מגדירים (2 דקות)</button>
     </div>
     <div class="card">
@@ -301,7 +301,25 @@ const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const icon = (n) => `<svg class="i"><use href="#i-${n}"/></svg>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const hh = (h) => String(h).padStart(2, '0') + ':00';
+const hm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+// שעה שכותבים ביד: 9, 930, 14:30, 1430. מחזיר דקות מחצות, null אם ריק, NaN אם לא תקין
+function parseTime(v) {
+  v = String(v || '').trim(); if (!v) return null;
+  let h, m;
+  const x = v.match(/^(\d{1,2})[:.](\d{1,2})$/);
+  if (x) { h = +x[1]; m = +x[2]; }
+  else if (/^\d{1,4}$/.test(v)) { if (v.length <= 2) { h = +v; m = 0; } else { h = +v.slice(0, -2); m = +v.slice(-2); } }
+  else return NaN;
+  return h <= 23 && m <= 59 ? h * 60 + m : NaN;
+}
+// מוסיף נקודתיים אוטומטית בזמן ההקלדה
+function timeInput(el) {
+  el.addEventListener('input', () => {
+    const d = el.value.replace(/\D/g, '').slice(0, 4);
+    el.value = d.length > 2 ? d.slice(0, d.length - 2) + ':' + d.slice(-2) : d;
+  });
+  el.addEventListener('blur', () => { const t = parseTime(el.value); if (t != null && !isNaN(t)) el.value = hm(t); });
+}
 let token = null, S = null, view = 'today', signup = false;
 try { token = localStorage.getItem('luz_token'); } catch {}
 
@@ -364,11 +382,12 @@ function render() {
 
 function taskState(t) {
   const c = S.today.checks[t.id];
-  if (t.kind === 'do') return c === 'done' ? 'done' : (t.by_hour != null && S.today.hour >= t.by_hour ? 'late' : 'open');
+  if (t.kind === 'do') return c === 'done' ? 'done' : t.per_week && !t.must ? 'free' : (t.by_min != null && S.today.min >= t.by_min ? 'late' : 'open');
   return c === 'broke' ? 'broke' : 'hold';
 }
 function renderToday() {
-  const tasks = S.today.tasks, dos = tasks.filter(t => t.kind === 'do'), donts = tasks.filter(t => t.kind === 'dont');
+  const tasks = S.today.tasks, all = tasks.filter(t => t.kind === 'do'), donts = tasks.filter(t => t.kind === 'dont');
+  const dos = all.filter(t => taskState(t) !== 'free'), free = all.filter(t => taskState(t) === 'free');
   const done = dos.filter(t => taskState(t) === 'done').length, open = dos.length - done;
   const broke = donts.filter(t => taskState(t) === 'broke').length;
   $('#ringNum').textContent = `${done}/${dos.length}`;
@@ -392,13 +411,16 @@ function renderToday() {
   }
   const row = (t) => {
     const st = taskState(t);
-    const sub = t.kind === 'dont' ? (st === 'broke' ? 'נשברת היום. מחר מתחילים מחדש' : 'מחזיק מעמד. לחץ אם נשברת')
-      : st === 'late' ? `היה צריך עד ${hh(t.by_hour)}` : t.by_hour != null ? `עד ${hh(t.by_hour)}` : st === 'done' ? 'בוצע' : 'לחץ כשסיימת';
+    const wk = t.per_week ? `${t.week_done}/${t.per_week} השבוע` : '';
+    let sub = t.kind === 'dont' ? (st === 'broke' ? 'נשברת היום. מחר מתחילים מחדש' : 'מחזיק מעמד. לחץ אם נשברת')
+      : st === 'late' ? `היה צריך עד ${hm(t.by_min)}` : st === 'free' ? 'אפשר היום או בימים הבאים' : t.by_min != null ? `עד ${hm(t.by_min)}` : st === 'done' ? 'בוצע' : 'לחץ כשסיימת';
+    if (wk) sub = (t.must && st !== 'done' ? 'חייב היום · ' : '') + wk + ' · ' + sub;
     const ic = t.kind === 'dont' ? (st === 'broke' ? 'x' : 'shield') : 'check';
     return `<button class="task fade ${t.kind} ${st}" data-id="${t.id}"><span class="box">${icon(ic)}</span><span class="t"><b>${esc(t.title)}</b><span>${sub}</span></span></button>`;
   };
   const openFirst = [...dos].sort((a, b) => (taskState(a) === 'done') - (taskState(b) === 'done'));
   el.innerHTML = (dos.length ? `<div class="sec">לעשות</div><div class="list">${openFirst.map(row).join('')}</div>` : '') +
+    (free.length ? `<div class="sec">השבוע (לא חובה היום)</div><div class="list">${free.map(row).join('')}</div>` : '') +
     (donts.length ? `<div class="sec">לא לעשות</div><div class="list">${donts.map(row).join('')}</div>` : '');
   el.querySelectorAll('.task').forEach(b => b.onclick = () => toggle(b.dataset.id));
 }
@@ -411,7 +433,7 @@ async function toggle(id) {
   try { S = await api('/check', { body: { task: id, status } }); render(); if (status && !S.today.locked && wasLast()) toast('זהו. סיימת להיום.'); }
   catch (e) { toast(e.message); load().catch(() => {}); }
 }
-const wasLast = () => S.today.tasks.filter(t => t.kind === 'do').every(t => S.today.checks[t.id] === 'done');
+const wasLast = () => S.today.tasks.filter(t => t.kind === 'do' && taskState(t) !== 'free').every(t => S.today.checks[t.id] === 'done');
 function confirmBroke(t) {
   openSheet(`<h2>נשברת ב"${esc(t.title)}"?</h2><p style="color:var(--muted);margin-bottom:16px">זה ישבור את הרצף של היום. כנות זה חלק מהעניין.</p>
     <button class="btn danger" id="yb">כן, נשברתי</button><button class="btn ghost" style="margin-top:8px" id="nb">לא, אני מחזיק</button>`);
@@ -421,32 +443,42 @@ function confirmBroke(t) {
 
 // ---------- ניהול משימות ----------
 const daysLabel = (d) => d === '0123456' ? 'כל יום' : d === '01234' ? 'א׳–ה׳' : d.split('').map(x => DAYS[x]).join(' ');
+const freqLabel = (t) => t.per_week ? (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
-  el.innerHTML = S.tasks.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${daysLabel(t.days)}${t.by_hour != null ? ' · עד ' + hh(t.by_hour) : ''}</span></span>
+  el.innerHTML = S.tasks.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
     <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('');
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.days || '0123456', by: t?.by_hour ?? '' };
-  const hours = ['<option value="">בלי שעה</option>'].concat(Array.from({ length: 19 }, (_, i) => `<option value="${i + 5}">עד ${hh(i + 5)}</option>`)).join('');
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week ? '0123456' : t?.days || '0123456', week: !!t?.per_week, n: t?.per_week || 3 };
   openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
-    <div class="field"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
+    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week">כמה פעמים בשבוע</button></div></div>
+    <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
-    <label class="field" id="fByWrap"><span>עד איזו שעה (אחריה ההתראות מתגברות)</span><select class="inp" id="fBy">${hours}</select></label>
+    <div class="field" id="fNWrap"><span>כמה פעמים בשבוע (אתה בוחר באילו ימים)</span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
+    <label class="field" id="fByWrap"><span>עד איזו שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)</span><input class="inp time" id="fBy" inputmode="numeric" maxlength="5" placeholder="למשל 14:30 – או ריק בלי שעה" value="${t?.by_min != null ? hm(t.by_min) : ''}"></label>
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
     ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
     $('#fKind').classList.toggle('red', f.kind === 'dont');
+    const wk = f.week && f.kind === 'do';
+    document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', (b.dataset.m === 'week') === wk));
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
+    document.querySelectorAll('#fN button').forEach(b => b.classList.toggle('on', +b.dataset.n === f.n));
+    $('#fModeWrap').classList.toggle('hidden', f.kind === 'dont');
+    $('#fDaysWrap').classList.toggle('hidden', wk);
+    $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', f.kind === 'dont');
   };
-  $('#fBy').value = String(f.by);
+  timeInput($('#fBy'));
+  document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; draw(); });
+  document.querySelectorAll('#fN button').forEach(b => b.onclick = () => { f.n = +b.dataset.n; draw(); });
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
     const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
@@ -455,7 +487,10 @@ function editTask(t) {
   draw();
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
-    const body = { title: $('#fTitle').value, kind: f.kind, days: f.days, by_hour: $('#fBy').value === '' ? null : Number($('#fBy').value) };
+    const by = f.kind === 'do' ? parseTime($('#fBy').value) : null;
+    if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
+    const wk = f.week && f.kind === 'do';
+    const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by };
     try { S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render(); toast(t ? 'נשמר' : 'נוספה משימה'); }
     catch (e) { $('#fErr').textContent = e.message; }
   };
@@ -471,11 +506,12 @@ const confirmDel = {};
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 const pushOK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-function opts(sel, from, to, fmt) { $(sel).innerHTML = Array.from({ length: to - from + 1 }, (_, i) => `<option value="${from + i}">${fmt(from + i)}</option>`).join(''); }
-opts('#sFrom', 5, 22, hh); opts('#sQuiet', 18, 24, h => h === 24 ? 'אף פעם' : hh(h)); opts('#sBlock', 0, 22, h => h === 0 ? 'כל היום' : hh(h));
+timeInput($('#sFrom')); timeInput($('#sQuiet'));
 function renderSettings() {
   const m = S.me;
-  $('#sFrom').value = m.remind_from; $('#sEvery').value = m.remind_every; $('#sQuiet').value = m.quiet_from; $('#sBlock').value = m.block_from;
+  if (document.activeElement !== $('#sFrom')) $('#sFrom').value = hm(m.remind_min);
+  if (document.activeElement !== $('#sQuiet')) $('#sQuiet').value = m.quiet_min >= 1440 ? '' : hm(m.quiet_min);
+  $('#sEvery').value = m.remind_every;
   $('#meEmail').textContent = m.email;
   const on = pushOK && Notification.permission === 'granted' && m.pushCount > 0;
   $('#pushDot').classList.toggle('on', on);
@@ -484,9 +520,11 @@ function renderSettings() {
   $('#pushTest').classList.toggle('hidden', !on);
   $('#iosNote').classList.toggle('hidden', !(isIOS && !standalone));
 }
-['#sFrom', '#sEvery', '#sQuiet', '#sBlock'].forEach(s => $(s).onchange = async () => {
-  try { S = await api('/settings', { body: { remind_from: +$('#sFrom').value, remind_every: +$('#sEvery').value, quiet_from: +$('#sQuiet').value, block_from: +$('#sBlock').value } }); render(); toast('נשמר'); }
-  catch (e) { toast(e.message); }
+['#sFrom', '#sEvery', '#sQuiet'].forEach(s => $(s).onchange = async () => {
+  const from = parseTime($('#sFrom').value), quiet = parseTime($('#sQuiet').value);
+  if (from == null || Number.isNaN(from) || Number.isNaN(quiet)) { toast('השעה לא תקינה. כתוב למשל 09:30'); return renderSettings(); }
+  try { S = await api('/settings', { body: { remind_min: from, remind_every: +$('#sEvery').value, quiet_min: quiet == null ? 1440 : quiet } }); render(); toast('נשמר'); }
+  catch (e) { toast(e.message); renderSettings(); }
 });
 async function enablePush() {
   try {
@@ -520,7 +558,7 @@ $('#gateBtn').onclick = () => {
       <li>בחר <b>אוטומציה ריקה חדשה</b>. בשורת החיפוש כתוב <b>קבל תוכן של URL</b> ולחץ עליו. לחץ על המילה <b>URL</b> והדבק את הקישור שהעתקת.</li>
       <li>חפש <b>אם</b> ולחץ עליו. לחץ על <b>תנאי</b>, בחר <b>מכיל</b>, ובמקום הטקסט כתוב <b>locked</b>.</li>
       <li>חפש <b>פתח URL</b>, לחץ עליו, וגרור אותו לתוך ה"אם" (מתחת לשורה של "אם"). בתוכו כתוב: <b dir="ltr">${esc(location.origin)}</b></li>
-      <li>לחץ <b>בוצע</b>. זהו – מעכשיו כל עוד יש משימה פתוחה, אינסטגרם יפתח את Luz.</li>
+      <li>לחץ <b>בוצע</b>. זהו – מעכשיו כשעבר המועד של משימה שלא סימנת, אינסטגרם יפתח את Luz.</li>
     </ol>
     <button class="btn danger" id="gReset">החלף קישור (אם שיתפת בטעות)</button>`);
   $('#cpy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('הועתק'); } catch { toast('לא הצלחתי להעתיק – סמן והעתק ידנית'); } };
