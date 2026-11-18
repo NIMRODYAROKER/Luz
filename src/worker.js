@@ -146,6 +146,7 @@ export class LuzDB extends DurableObject {
     const addCol = (tbl, def, fill) => { try { this.sql.exec(`ALTER TABLE ${tbl} ADD COLUMN ${def}`); if (fill) this.sql.exec(fill); } catch {} };
     addCol('tasks', 'by_min INTEGER', 'UPDATE tasks SET by_min = by_hour * 60 WHERE by_hour IS NOT NULL');
     addCol('tasks', 'per_week INTEGER');
+    addCol('checks', 'n INTEGER NOT NULL DEFAULT 1');
     addCol('users', 'remind_min INTEGER NOT NULL DEFAULT 540', 'UPDATE users SET remind_min = remind_from * 60');
     addCol('users', 'quiet_min INTEGER NOT NULL DEFAULT 1380', 'UPDATE users SET quiet_min = quiet_from * 60');
     this.sql.exec('DELETE FROM sessions WHERE created < ?', Date.now() - SESSION_DAYS * 864e5);
@@ -182,6 +183,11 @@ export class LuzDB extends DurableObject {
     return this.q('SELECT * FROM tasks WHERE user_id = ? AND from_day <= ? AND (to_day IS NULL OR to_day > ?) ORDER BY sort, created', uid, day, day)
       .filter(t => {
         if (!t.per_week) return t.days.includes(String(dow));
+        // "לא לעשות" עם הגבלה: מופיעה כל יום, סופרים כמה פעמים השבוע
+        if (t.kind === 'dont') {
+          t.before = this.one("SELECT COALESCE(SUM(n), 0) AS c FROM checks WHERE task_id = ? AND status = 'used' AND day >= ? AND day < ?", t.id, ws, day).c;
+          return true;
+        }
         t.before = this.one("SELECT COUNT(*) AS c FROM checks WHERE task_id = ? AND status = 'done' AND day >= ? AND day < ?", t.id, ws, day).c;
         if (t.before >= t.per_week) return false;
         t.must = t.per_week - t.before >= 7 - dow;
@@ -189,12 +195,14 @@ export class LuzDB extends DurableObject {
       });
   }
   checksOn(uid, day) {
-    const m = {}; for (const c of this.q('SELECT task_id, status FROM checks WHERE user_id = ? AND day = ?', uid, day)) m[c.task_id] = c.status; return m;
+    const m = {}; for (const c of this.q('SELECT task_id, status, n FROM checks WHERE user_id = ? AND day = ?', uid, day)) m[c.task_id] = c.status === 'used' ? 'used:' + c.n : c.status; return m;
   }
   dayResult(uid, day) {
     const tasks = this.tasksOn(uid, day), checks = this.checksOn(uid, day);
     const open = tasks.filter(t => t.kind === 'do' && checks[t.id] !== 'done' && (!t.per_week || t.must));
-    const broke = tasks.filter(t => t.kind === 'dont' && checks[t.id] === 'broke');
+    const used = (t) => Number(String(checks[t.id] || '').split('used:')[1] || 0);
+    for (const t of tasks) if (t.kind === 'dont' && t.per_week) t.used = t.before + used(t);
+    const broke = tasks.filter(t => t.kind === 'dont' && (t.per_week ? t.used > t.per_week : checks[t.id] === 'broke'));
     return { tasks, checks, open, broke, ok: !open.length && !broke.length, empty: !tasks.length };
   }
   streak(u) {
@@ -235,7 +243,7 @@ export class LuzDB extends DurableObject {
       me: { email: u.email, gate: u.gate_key, remind_min: u.remind_min, remind_every: u.remind_every, quiet_min: u.quiet_min,
         pushCount: this.one('SELECT COUNT(*) AS c FROM subs WHERE user_id = ?', u.id).c },
       today: { day: l.day, dow: l.dow, hour: l.hour, min: l.min, checks: r.checks, locked: this.locked(u, l),
-        tasks: r.tasks.map(t => ({ ...pubTask(t), ...(t.per_week ? { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
+        tasks: r.tasks.map(t => ({ ...pubTask(t), ...(t.per_week ? t.kind === 'dont' ? { week_used: t.used } : { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
       tasks: all.map(pubTask), week, ...this.streak(u)
     };
   }
@@ -390,6 +398,14 @@ export class LuzDB extends DurableObject {
       const task = this.tasksOn(u.id, today).find(t => t.id === id);
       if (!task) bad('המשימה לא להיום');
       const st = body.status;
+      if (task.kind === 'dont' && task.per_week) {
+        // הגבלה שבועית: כל לחיצה מוסיפה פעם אחת, "unuse" מבטל את האחרונה של היום
+        if (st === 'used') this.sql.exec("INSERT INTO checks (task_id, user_id, day, status, t, n) VALUES (?, ?, ?, 'used', ?, 1) ON CONFLICT(task_id, day) DO UPDATE SET n = MIN(n + 1, 50), t = excluded.t", id, u.id, today, Date.now());
+        else if (st === 'unuse') { this.sql.exec('UPDATE checks SET n = n - 1 WHERE task_id = ? AND day = ?', id, today); this.sql.exec('DELETE FROM checks WHERE task_id = ? AND day = ? AND n <= 0', id, today); }
+        else bad('סימון לא תקין');
+        return json(this.state(u));
+      }
+      if (task.kind === 'dont' && st === 'broke' && task.by_min != null && local().min >= task.by_min) bad('השעה כבר עברה – הצלחת היום');
       if (st === null) this.sql.exec('DELETE FROM checks WHERE task_id = ? AND day = ?', id, today);
       else if ((task.kind === 'do' && st === 'done') || (task.kind === 'dont' && st === 'broke'))
         this.sql.exec('INSERT INTO checks (task_id, user_id, day, status, t) VALUES (?, ?, ?, ?, ?) ON CONFLICT(task_id, day) DO UPDATE SET status = excluded.status, t = excluded.t', id, u.id, today, st, Date.now());
@@ -444,13 +460,14 @@ function cleanTask(b) {
   const title = norm(b.title, 50);
   if (!title) bad('כתוב מה המשימה');
   const kind = b.kind === 'dont' ? 'dont' : 'do';
-  const per_week = kind === 'do' && b.per_week != null && b.per_week !== '' ? intIn(b.per_week, 1, 6, null) : null;
-  if (kind === 'do' && b.per_week != null && b.per_week !== '' && !per_week) bad('בחר כמה פעמים בשבוע');
+  const hasN = b.per_week != null && b.per_week !== '';
+  const per_week = hasN ? intIn(b.per_week, 1, kind === 'do' ? 6 : 7, null) : null;
+  if (hasN && !per_week) bad('בחר כמה פעמים בשבוע');
   const days = per_week ? '0123456' : [...new Set(String(b.days ?? '').split('').filter(c => /[0-6]/.test(c)))].sort().join('');
   if (!days) bad('בחר לפחות יום אחד');
   let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
   if (by_min === -1) bad('השעה לא תקינה');
-  if (kind !== 'do') by_min = null;
+  if (kind === 'dont' && per_week) by_min = null;
   return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60) };
 }
 const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null });

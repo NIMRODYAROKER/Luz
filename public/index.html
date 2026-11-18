@@ -383,10 +383,12 @@ function render() {
 function taskState(t) {
   const c = S.today.checks[t.id];
   if (t.kind === 'do') return c === 'done' ? 'done' : t.per_week && !t.must ? 'free' : (t.by_min != null && S.today.min >= t.by_min ? 'late' : 'open');
-  return c === 'broke' ? 'broke' : 'hold';
+  if (t.per_week) return t.week_used > t.per_week ? 'broke' : 'hold';
+  return c === 'broke' ? 'broke' : t.by_min != null && S.today.min >= t.by_min ? 'passed' : 'hold';
 }
 function renderToday() {
-  const tasks = S.today.tasks, all = tasks.filter(t => t.kind === 'do'), donts = tasks.filter(t => t.kind === 'dont');
+  // "לא לעשות" עד שעה מסוימת שעברה בהצלחה – נעלמת מהרשימה
+  const tasks = S.today.tasks.filter(t => taskState(t) !== 'passed'), all = tasks.filter(t => t.kind === 'do'), donts = tasks.filter(t => t.kind === 'dont');
   const dos = all.filter(t => taskState(t) !== 'free'), free = all.filter(t => taskState(t) === 'free');
   const done = dos.filter(t => taskState(t) === 'done').length, open = dos.length - done;
   const broke = donts.filter(t => taskState(t) === 'broke').length;
@@ -412,9 +414,10 @@ function renderToday() {
   const row = (t) => {
     const st = taskState(t);
     const wk = t.per_week ? `${t.week_done}/${t.per_week} השבוע` : '';
-    let sub = t.kind === 'dont' ? (st === 'broke' ? 'נשברת היום. מחר מתחילים מחדש' : 'מחזיק מעמד. לחץ אם נשברת')
+    let sub = t.kind === 'dont' ? (t.per_week ? `${t.week_used}/${t.per_week} השבוע · ` + (st === 'broke' ? 'עברת את המכסה. השבוע נשבר' : 'לחץ כשעשית')
+      : st === 'broke' ? 'נשברת היום. מחר מתחילים מחדש' : t.by_min != null ? `מחזיק עד ${hm(t.by_min)}. לחץ אם נשברת` : 'מחזיק מעמד. לחץ אם נשברת')
       : st === 'late' ? `היה צריך עד ${hm(t.by_min)}` : st === 'free' ? 'אפשר היום או בימים הבאים' : t.by_min != null ? `עד ${hm(t.by_min)}` : st === 'done' ? 'בוצע' : 'לחץ כשסיימת';
-    if (wk) sub = (t.must && st !== 'done' ? 'חייב היום · ' : '') + wk + ' · ' + sub;
+    if (wk && t.kind === 'do') sub = (t.must && st !== 'done' ? 'חייב היום · ' : '') + wk + ' · ' + sub;
     const ic = t.kind === 'dont' ? (st === 'broke' ? 'x' : 'shield') : 'check';
     return `<button class="task fade ${t.kind} ${st}" data-id="${t.id}"><span class="box">${icon(ic)}</span><span class="t"><b>${esc(t.title)}</b><span>${sub}</span></span></button>`;
   };
@@ -426,6 +429,7 @@ function renderToday() {
 }
 async function toggle(id) {
   const t = S.today.tasks.find(x => x.id === id), st = taskState(t);
+  if (t.kind === 'dont' && t.per_week) return countSheet(t);
   if (t.kind === 'dont' && st === 'hold') return confirmBroke(t);
   const status = st === 'done' || st === 'broke' ? null : 'done';
   S.today.checks[id] = status || undefined; if (!status) delete S.today.checks[id];
@@ -434,6 +438,15 @@ async function toggle(id) {
   catch (e) { toast(e.message); load().catch(() => {}); }
 }
 const wasLast = () => S.today.tasks.filter(t => t.kind === 'do' && taskState(t) !== 'free').every(t => S.today.checks[t.id] === 'done');
+function countSheet(t) {
+  const today = Number(String(S.today.checks[t.id] || '').split('used:')[1] || 0), over = t.week_used + 1 > t.per_week;
+  openSheet(`<h2>${esc(t.title)}</h2><p style="color:var(--muted);margin-bottom:16px">השבוע: ${t.week_used} מתוך ${t.per_week}.${over ? ' עוד פעם תעבור את המכסה ותשבור את השבוע.' : ''}</p>
+    <button class="btn ${over ? 'danger' : ''}" id="cu">עשיתי עוד פעם</button>
+    ${today ? '<button class="btn ghost" style="margin-top:8px" id="cn">ביטול הפעם האחרונה (טעיתי)</button>' : ''}
+    <button class="btn ghost" style="margin-top:8px" id="cc">סגור</button>`);
+  const send = async (status) => { closeSheet(); try { S = await api('/check', { body: { task: t.id, status } }); render(); } catch (e) { toast(e.message); } };
+  $('#cu').onclick = () => send('used'); $('#cc').onclick = closeSheet; if (today) $('#cn').onclick = () => send('unuse');
+}
 function confirmBroke(t) {
   openSheet(`<h2>נשברת ב"${esc(t.title)}"?</h2><p style="color:var(--muted);margin-bottom:16px">זה ישבור את הרצף של היום. כנות זה חלק מהעניין.</p>
     <button class="btn danger" id="yb">כן, נשברתי</button><button class="btn ghost" style="margin-top:8px" id="nb">לא, אני מחזיק</button>`);
@@ -443,7 +456,7 @@ function confirmBroke(t) {
 
 // ---------- ניהול משימות ----------
 const daysLabel = (d) => d === '0123456' ? 'כל יום' : d === '01234' ? 'א׳–ה׳' : d.split('').map(x => DAYS[x]).join(' ');
-const freqLabel = (t) => t.per_week ? (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
+const freqLabel = (t) => t.per_week ? (t.kind === 'dont' ? 'עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
@@ -456,25 +469,29 @@ function editTask(t) {
   openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
-    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week">כמה פעמים בשבוע</button></div></div>
+    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button></div></div>
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
-    <div class="field" id="fNWrap"><span>כמה פעמים בשבוע (אתה בוחר באילו ימים)</span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
-    <label class="field" id="fByWrap"><span>עד איזו שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)</span><input class="inp time" id="fBy" inputmode="numeric" maxlength="5" placeholder="למשל 14:30 – או ריק בלי שעה" value="${t?.by_min != null ? hm(t.by_min) : ''}"></label>
+    <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6, 7].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
+    <label class="field" id="fByWrap"><span id="fByLbl"></span><input class="inp time" id="fBy" inputmode="numeric" maxlength="5" placeholder="למשל 14:30 – או ריק בלי שעה" value="${t?.by_min != null ? hm(t.by_min) : ''}"></label>
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
     ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
     $('#fKind').classList.toggle('red', f.kind === 'dont');
-    const wk = f.week && f.kind === 'do';
+    const wk = f.week, dont = f.kind === 'dont';
+    if (!dont && f.n > 6) f.n = 6;
+    $('#fWeekBtn').textContent = dont ? 'מוגבל לכמה פעמים' : 'כמה פעמים בשבוע';
+    $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע (אתה בוחר באילו ימים)';
+    $('#fByLbl').textContent = dont ? 'עד איזו שעה לא (אחריה זה נחשב הצלחה) – ריק = כל היום' : 'עד איזו שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)';
+    document.querySelector('#fN button[data-n="7"]').classList.toggle('hidden', !dont);
     document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', (b.dataset.m === 'week') === wk));
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
     document.querySelectorAll('#fN button').forEach(b => b.classList.toggle('on', +b.dataset.n === f.n));
-    $('#fModeWrap').classList.toggle('hidden', f.kind === 'dont');
     $('#fDaysWrap').classList.toggle('hidden', wk);
     $('#fNWrap').classList.toggle('hidden', !wk);
-    $('#fByWrap').classList.toggle('hidden', f.kind === 'dont');
+    $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
   timeInput($('#fBy'));
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; draw(); });
@@ -487,9 +504,9 @@ function editTask(t) {
   draw();
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
-    const by = f.kind === 'do' ? parseTime($('#fBy').value) : null;
+    const wk = f.week;
+    const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
-    const wk = f.week && f.kind === 'do';
     const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by };
     try { S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render(); toast(t ? 'נשמר' : 'נוספה משימה'); }
     catch (e) { $('#fErr').textContent = e.message; }
