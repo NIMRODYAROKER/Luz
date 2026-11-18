@@ -16,6 +16,7 @@ export default {
     if (url.pathname.startsWith('/api/')) {
       return withSecurityHeaders(await db(env).fetch(request));
     }
+    if (url.pathname === '/cal.ics') return withSecurityHeaders(calendarFile(url));
     const res = await env.ASSETS.fetch(request);
     const out = withSecurityHeaders(res);
     const type = res.headers.get('content-type') || '';
@@ -30,6 +31,25 @@ export default {
   }
 };
 const db = (env) => env.DB.get(env.DB.idFromName('main'));
+
+// קובץ אירוע ליומן של האייפון (משימה חד פעמית). לא נוגע בשום מידע שמור – רק מה שבכתובת
+function calendarFile(url) {
+  const title = norm(url.searchParams.get('t'), 50) || 'משימה';
+  const d = String(url.searchParams.get('d') || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(Date.parse(d))) return new Response('bad date', { status: 400 });
+  const m = url.searchParams.has('m') ? intIn(url.searchParams.get('m'), 0, 1439, null) : null;
+  const esc = (v) => v.replace(/[\\;,]/g, c => '\\' + c);
+  const ymd = d.replace(/-/g, ''), now = new Date().toISOString().replace(/[-:]|\.\d+/g, '');
+  const p2 = (n) => String(n).padStart(2, '0');
+  const when = m == null
+    ? [`DTSTART;VALUE=DATE:${ymd}`, `DTEND;VALUE=DATE:${addDays(d, 1).replace(/-/g, '')}`]
+    : [`DTSTART;TZID=${TZ}:${ymd}T${p2(Math.floor(m / 60))}${p2(m % 60)}00`, `DURATION:PT30M`];
+  const alarm = m == null ? [] : ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(title)}`, 'TRIGGER:-PT15M', 'END:VALARM'];
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Luz//HE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT', `UID:${randomId(12)}@luz`, `DTSTAMP:${now}`, ...when, `SUMMARY:${esc(title)}`,
+    `DESCRIPTION:${esc('משימה מ-Luz')}`, ...alarm, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+  return new Response(ics, { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': 'inline; filename="luz.ics"', 'cache-control': 'no-store' } });
+}
 
 function withSecurityHeaders(res) {
   const out = new Response(res.body, res);
@@ -147,6 +167,7 @@ export class LuzDB extends DurableObject {
     const addCol = (tbl, def, fill) => { try { this.sql.exec(`ALTER TABLE ${tbl} ADD COLUMN ${def}`); if (fill) this.sql.exec(fill); } catch {} };
     addCol('tasks', 'by_min INTEGER', 'UPDATE tasks SET by_min = by_hour * 60 WHERE by_hour IS NOT NULL');
     addCol('tasks', 'per_week INTEGER');
+    addCol('tasks', 'on_day TEXT');
     addCol('checks', 'n INTEGER NOT NULL DEFAULT 1');
     addCol('users', 'remind_min INTEGER NOT NULL DEFAULT 540', 'UPDATE users SET remind_min = remind_from * 60');
     addCol('users', 'quiet_min INTEGER NOT NULL DEFAULT 1380', 'UPDATE users SET quiet_min = quiet_from * 60');
@@ -183,6 +204,7 @@ export class LuzDB extends DurableObject {
     const dow = dowOf(day), ws = addDays(day, -dow);
     return this.q('SELECT * FROM tasks WHERE user_id = ? AND from_day <= ? AND (to_day IS NULL OR to_day > ?) ORDER BY sort, created', uid, day, day)
       .filter(t => {
+        if (t.on_day) return t.on_day === day; // משימה חד פעמית
         if (!t.per_week) return t.days.includes(String(dow));
         // "לא לעשות" עם הגבלה: מופיעה כל יום, סופרים כמה פעמים השבוע
         if (t.kind === 'dont') {
@@ -229,7 +251,10 @@ export class LuzDB extends DurableObject {
   kvGet(k) { return this.one('SELECT v FROM kv WHERE k = ?', k)?.v ?? null; }
   kvSet(k, v) { this.sql.exec('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v', k, v); }
 
+  // משימה חד פעמית שהתאריך שלה עבר יורדת מהרשימה (נשארת בהיסטוריה של אותו יום)
+  closeOnce(uid) { this.sql.exec('UPDATE tasks SET to_day = date(on_day, \'+1 day\') WHERE user_id = ? AND on_day IS NOT NULL AND on_day < ? AND to_day IS NULL', uid, local().day); }
   state(u) {
+    this.closeOnce(u.id);
     const l = local(), r = this.dayResult(u.id, l.day);
     const all = this.q('SELECT * FROM tasks WHERE user_id = ? AND to_day IS NULL ORDER BY sort, created', u.id);
     // שבוע אחרון לתצוגה
@@ -393,10 +418,11 @@ export class LuzDB extends DurableObject {
 
     if (path === '/api/tasks' && method === 'POST') {
       const t = cleanTask(body);
+      this.closeOnce(u.id);
       if (this.one('SELECT COUNT(*) AS c FROM tasks WHERE user_id = ? AND to_day IS NULL', u.id).c >= MAX_TASKS) bad('יותר מדי משימות');
       const maxSort = this.one('SELECT MAX(sort) AS s FROM tasks WHERE user_id = ?', u.id).s || 0;
-      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        randomId(9), u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, maxSort + 1, local().day, Date.now());
+      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        randomId(9), u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, maxSort + 1, local().day, Date.now());
       return json(this.state(u));
     }
     m = path.match(/^\/api\/tasks\/([A-Za-z0-9_-]{6,20})$/);
@@ -412,14 +438,14 @@ export class LuzDB extends DurableObject {
       }
       if (method === 'PUT') {
         const t = cleanTask(body);
-        if (task.from_day >= today || (t.kind === task.kind && t.days === task.days && t.per_week === (task.per_week ?? null))) {
-          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, per_week = ?, by_hour = ?, by_min = ? WHERE id = ?', t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, task.id);
+        if (task.from_day >= today || (t.kind === task.kind && t.days === task.days && t.per_week === (task.per_week ?? null) && t.on_day === (task.on_day ?? null))) {
+          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, per_week = ?, by_hour = ?, by_min = ?, on_day = ? WHERE id = ?', t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, task.id);
         } else {
           // שינוי ימים/סוג חל מהיום והלאה, בלי לשנות את העבר
           const nid = randomId(9);
           this.sql.exec('UPDATE tasks SET to_day = ? WHERE id = ?', today, task.id);
-          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, task.sort, today, Date.now());
+          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, task.sort, today, Date.now());
           this.sql.exec('UPDATE checks SET task_id = ? WHERE task_id = ? AND day = ?', nid, task.id, today);
         }
         return json(this.state(u));
@@ -492,6 +518,16 @@ function cleanTask(b) {
   const title = norm(b.title, 50);
   if (!title) bad('כתוב מה המשימה');
   const kind = b.kind === 'dont' ? 'dont' : 'do';
+  // משימה חד פעמית: תאריך אחד, מהיום ועד שנה קדימה
+  if (b.on_day != null && b.on_day !== '') {
+    const on_day = String(b.on_day), today = local().day;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on_day) || isNaN(Date.parse(on_day))) bad('התאריך לא תקין');
+    if (on_day < today) bad('התאריך כבר עבר');
+    if (on_day > addDays(today, 366)) bad('אפשר עד שנה קדימה');
+    let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
+    if (by_min === -1) bad('השעה לא תקינה');
+    return { title, kind, days: String(dowOf(on_day)), per_week: null, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day };
+  }
   const hasN = b.per_week != null && b.per_week !== '';
   const per_week = hasN ? intIn(b.per_week, 1, kind === 'do' ? 6 : 7, null) : null;
   if (hasN && !per_week) bad('בחר כמה פעמים בשבוע');
@@ -500,6 +536,6 @@ function cleanTask(b) {
   let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
   if (by_min === -1) bad('השעה לא תקינה');
   if (kind === 'dont' && per_week) by_min = null;
-  return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60) };
+  return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day: null };
 }
-const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null });
+const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null, on_day: t.on_day ?? null });

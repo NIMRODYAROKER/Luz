@@ -131,6 +131,9 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .seg{display:flex;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:4px;gap:4px}
 .seg button{flex:1;padding:11px;border-radius:10px;font-weight:700;color:var(--muted);transition:.2s}
 .seg button.on{background:var(--olive);color:#11140d}
+#fMode button{padding:11px 4px;font-size:14px}
+a.btn{text-decoration:none}
+.inp[type=date]{direction:ltr;text-align:right;min-height:52px;-webkit-appearance:none;appearance:none}
 .seg.red button.on{background:var(--red);color:#fff}
 .days{display:flex;gap:6px}
 .days button{flex:1;aspect-ratio:1;max-height:46px;border-radius:12px;background:var(--bg2);border:1px solid var(--line2);font-weight:800;color:var(--muted);transition:.2s}
@@ -451,7 +454,17 @@ function confirmBroke(t) {
 
 // ---------- ניהול משימות ----------
 const daysLabel = (d) => d === '0123456' ? 'כל יום' : d === '01234' ? 'א׳–ה׳' : d.split('').map(x => DAYS[x]).join(' ');
-const freqLabel = (t) => t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
+const todayStr = () => S?.today?.day || new Date().toISOString().slice(0, 10);
+const dateLabel = (d) => { const x = new Date(d + 'T12:00:00Z'); return d === todayStr() ? 'היום' : `יום ${DAYS[x.getUTCDay()]}׳ ${x.getUTCDate()}.${x.getUTCMonth() + 1}`; };
+// קובץ אירוע ליומן של האייפון – האייפון שואל אם להוסיף אותו ללוח השנה
+const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_day, ...(t.by_min != null ? { m: t.by_min } : {}) });
+function offerCalendar(t) {
+  openSheet(`<h2>להוסיף ליומן?</h2><p style="color:var(--muted);margin-bottom:16px">"${esc(t.title)}" – ${dateLabel(t.on_day)}${t.by_min != null ? ' בשעה ' + hm(t.by_min) : ' (כל היום)'}. האייפון יפתח את לוח השנה ותלחץ שם "הוסף".</p>
+    <a class="btn" href="${calUrl(t)}" id="calGo">${icon('today')}הוסף ליומן באייפון</a>
+    <button class="btn ghost" style="margin-top:8px" id="calNo">לא עכשיו</button>`);
+  $('#calGo').onclick = () => setTimeout(closeSheet, 300); $('#calNo').onclick = closeSheet;
+}
+const freqLabel = (t) => t.on_day ? 'חד פעמי · ' + dateLabel(t.on_day) : t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
@@ -460,36 +473,39 @@ function renderTasks() {
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week ? '0123456' : t?.days || '0123456', week: !!t?.per_week, n: t?.per_week || 3 };
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week || t?.on_day ? '0123456' : t?.days || '0123456', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3 };
   openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
-    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button></div></div>
+    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
+    <label class="field" id="fDateWrap"><span>באיזה תאריך</span><input class="inp" type="date" id="fDate" min="${todayStr()}" value="${t?.on_day || todayStr()}"></label>
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
     <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6, 7].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
     <label class="field" id="fByWrap"><span id="fByLbl"></span><input class="inp time" id="fBy" inputmode="numeric" maxlength="5" placeholder="למשל 14:30 – או ריק בלי שעה" value="${t?.by_min != null ? hm(t.by_min) : ''}"></label>
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
+    ${t?.on_day ? `<a class="btn ghost" style="margin-top:8px" href="${calUrl(t)}">${icon('today')}הוסף ליומן באייפון</a>` : ''}
     ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
     $('#fKind').classList.toggle('red', f.kind === 'dont');
-    const wk = f.week, dont = f.kind === 'dont';
+    const wk = f.week && !f.once, dont = f.kind === 'dont', once = f.once;
     if (!dont && f.n > 6) f.n = 6;
     $('#fWeekBtn').textContent = dont ? 'מוגבל לכמה פעמים' : 'כמה פעמים בשבוע';
     $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע (אתה בוחר באילו ימים)';
     $('#fByLbl').textContent = dont ? 'עד איזו שעה לא (אחריה זה נחשב הצלחה) – ריק = כל היום' : 'עד איזו שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)';
     document.querySelector('#fN button[data-n="7"]').classList.toggle('hidden', !dont);
-    document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', (b.dataset.m === 'week') === wk));
+    document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.m === (once ? 'once' : wk ? 'week' : 'days')));
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
     document.querySelectorAll('#fN button').forEach(b => b.classList.toggle('on', +b.dataset.n === f.n));
-    $('#fDaysWrap').classList.toggle('hidden', wk);
+    $('#fDaysWrap').classList.toggle('hidden', wk || once);
+    $('#fDateWrap').classList.toggle('hidden', !once);
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
   timeInput($('#fBy'));
-  document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; draw(); });
+  document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   document.querySelectorAll('#fN button').forEach(b => b.onclick = () => { f.n = +b.dataset.n; draw(); });
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
@@ -499,11 +515,18 @@ function editTask(t) {
   draw();
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
-    const wk = f.week;
+    const once = f.once, wk = f.week && !once;
     const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
-    const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by };
-    try { S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render(); toast(t ? 'נשמר' : 'נוספה משימה'); }
+    const on_day = once ? $('#fDate').value : null;
+    if (once && !on_day) return $('#fErr').textContent = 'בחר תאריך';
+    const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by, on_day };
+    try {
+      S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body }); closeSheet(); render();
+      const changed = once && (!t || t.on_day !== on_day || t.by_min !== by || t.title !== body.title.trim());
+      if (changed) { const nt = [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' ')); if (nt) return setTimeout(() => offerCalendar(nt), 350); }
+      toast(t ? 'נשמר' : 'נוספה משימה');
+    }
     catch (e) { $('#fErr').textContent = e.message; }
   };
   if (t) $('#fDel').onclick = async () => {
