@@ -84,6 +84,7 @@ function local(t = Date.now()) {
   return { day, dow: new Date(day + 'T12:00:00Z').getUTCDay(), hour, min: hour * 60 + Number(p.minute) };
 }
 const addDays = (day, n) => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const hm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const dowOf = (day) => new Date(day + 'T12:00:00Z').getUTCDay();
 
 // ---------- Web Push (VAPID + הצפנת aes128gcm) ----------
@@ -277,20 +278,51 @@ export class LuzDB extends DurableObject {
     for (const s of subs) { try { out.push(await this.sendPush(s, msg)); } catch (e) { console.error('push', e); out.push(0); } }
     return out;
   }
+  // התראות אוטומטיות לכל משימה, בלי הגדרות:
+  // משימה עם שעה – שעתיים, שעה, חצי שעה ורבע שעה לפני, בזמן, ואחרי זה כל רבע שעה עד שמסמנים.
+  // משימה בלי שעה – מ-9 בבוקר כל שעתיים, מ-18 כל שעה, מ-21 כל חצי שעה. שקט בין 23:30 ל-7:00.
+  notePoint(t, min) {
+    const QUIET = 1410;
+    if (t.by_min != null) {
+      const D = t.by_min;
+      if (min >= D) { const end = Math.max(QUIET, D + 60); return min < end ? D + Math.floor((min - D) / 15) * 15 : null; }
+      const pts = [D - 120, D - 60, D - 30, D - 15].filter(p => p <= min && p >= 0 && (p >= 420 || D < 600));
+      return pts.length ? pts[pts.length - 1] : null;
+    }
+    if (min < 540 || min >= QUIET) return null;
+    if (min < 1080) return 540 + Math.floor((min - 540) / 120) * 120;
+    if (min < 1260) return 1080 + Math.floor((min - 1080) / 60) * 60;
+    return 1260 + Math.floor((min - 1260) / 30) * 30;
+  }
   async cron() {
     const l = local(), now = Date.now();
     for (const u of this.q('SELECT u.* FROM users u WHERE EXISTS (SELECT 1 FROM subs s WHERE s.user_id = u.id)')) {
-      if (l.min >= u.quiet_min || l.min < Math.min(u.remind_min, 420)) continue;
       const r = this.dayResult(u.id, l.day);
       if (!r.open.length) continue;
-      const late = r.open.filter(t => t.by_min != null && l.min >= t.by_min);
-      const every = late.length ? Math.min(15, u.remind_every) : u.remind_every;
-      if (!late.length && l.min < u.remind_min) continue;
-      if (now - u.last_push < every * 60e3 - 60e3) continue;
-      const names = (late.length ? late : r.open).slice(0, 3).map(t => t.title).join(', ');
-      const msg = late.length
-        ? { title: 'עבר הזמן', body: `${names} – היה צריך להיות גמור. קום ותעשה.` }
-        : { title: `נשארו ${r.open.length} משימות`, body: `${names}. אני לא עוזב אותך עד שזה נגמר.` };
+      const due = [];
+      for (const t of r.open) {
+        const p = this.notePoint(t, l.min);
+        if (p == null || l.min - p > 30) continue;
+        const key = 'note:' + t.id, mark = l.day + '|' + p;
+        if (this.kvGet(key) === mark) continue;
+        due.push({ t, p, key, mark });
+      }
+      if (!due.length || now - u.last_push < 4 * 60e3) continue;
+      const late = due.filter(x => x.t.by_min != null && l.min >= x.t.by_min);
+      const soon = due.filter(x => x.t.by_min != null && l.min < x.t.by_min).sort((a, b) => a.t.by_min - b.t.by_min);
+      const others = r.open.map(t => t.title);
+      let msg;
+      if (late.length) {
+        const names = late.slice(0, 3).map(x => x.t.title).join(', ');
+        msg = { title: 'עבר הזמן', body: `${names} – היה צריך להיות גמור עד ${hm(late[0].t.by_min)}. קום ותעשה.` };
+      } else if (soon.length) {
+        const t = soon[0].t, left = t.by_min - l.min;
+        const when = left <= 20 ? 'רבע שעה' : left <= 40 ? 'חצי שעה' : left <= 75 ? 'שעה' : 'שעתיים';
+        msg = { title: `${t.title} – עוד ${when}`, body: left <= 20 ? `עד ${hm(t.by_min)}. עכשיו או אף פעם.` : `צריך להיות גמור עד ${hm(t.by_min)}. זה הזמן להתחיל.` };
+      } else {
+        msg = { title: `נשארו ${r.open.length} משימות`, body: `${others.slice(0, 3).join(', ')}. אני לא עוזב אותך עד שזה נגמר.` };
+      }
+      for (const x of due) this.kvSet(x.key, x.mark);
       this.sql.exec('UPDATE users SET last_push = ? WHERE id = ?', now, u.id);
       await this.pushUser(u.id, msg);
     }

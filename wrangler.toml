@@ -14,6 +14,6 @@ class_name = "LuzDB"
 tag = "v1"
 new_sqlite_classes = ["LuzDB"]
 
-# כל 10 דקות: בדיקה למי צריך לשלוח התראה
+# כל 5 דקות: בדיקה למי צריך לשלוח התראה
 [triggers]
-crons = ["*/10 * * * *"]
+crons = ["*/5 * * * *"]

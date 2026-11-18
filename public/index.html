@@ -257,13 +257,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
     <h2>הגדרות</h2>
     <div class="card">
       <h3><svg class="i"><use href="#i-bell"/></svg>התראות שמציקות</h3>
-      <p>כל עוד יש משימה פתוחה, תקבל התראה שוב ושוב. עבר המועד של משימה – כל רבע שעה.</p>
+      <p>ההתראות מותאמות לכל משימה לבד: משימה עם שעה – תזכורות שמתגברות לקראת המועד, ואחריו כל רבע שעה עד שתסמן. משימה בלי שעה – מ-9 בבוקר, ויותר ככל שהיום מתקדם. בלילה (23:30–7:00) שקט.</p>
       <div class="status"><span class="dot" id="pushDot"></span><span id="pushLbl"></span></div>
-      <div class="row2">
-        <label class="field"><span>להתחיל משעה</span><input class="inp time" id="sFrom" inputmode="numeric" maxlength="5" placeholder="09:00"></label>
-        <label class="field"><span>כל כמה זמן</span><select class="inp" id="sEvery"><option value="15">15 דקות</option><option value="30">חצי שעה</option><option value="60">שעה</option><option value="120">שעתיים</option></select></label>
-      </div>
-      <label class="field"><span>שקט מהשעה (ריק = אף פעם)</span><input class="inp time" id="sQuiet" inputmode="numeric" maxlength="5" placeholder="23:00"></label>
       <button class="btn" id="pushBtn">הפעל התראות</button>
       <button class="btn ghost hidden" id="pushTest">שלח התראת בדיקה</button>
       <p class="hidden" id="iosNote" style="margin:12px 0 0">באייפון ההתראות עובדות רק אחרי שמוסיפים את Luz למסך הבית: בספארי לוחצים על <b>שיתוף</b> ואז <b>הוסף למסך הבית</b>, ופותחים מהאייקון.</p>
@@ -456,7 +451,7 @@ function confirmBroke(t) {
 
 // ---------- ניהול משימות ----------
 const daysLabel = (d) => d === '0123456' ? 'כל יום' : d === '01234' ? 'א׳–ה׳' : d.split('').map(x => DAYS[x]).join(' ');
-const freqLabel = (t) => t.per_week ? (t.kind === 'dont' ? 'עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
+const freqLabel = (t) => t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
@@ -523,12 +518,8 @@ const confirmDel = {};
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 const pushOK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-timeInput($('#sFrom')); timeInput($('#sQuiet'));
 function renderSettings() {
   const m = S.me;
-  if (document.activeElement !== $('#sFrom')) $('#sFrom').value = hm(m.remind_min);
-  if (document.activeElement !== $('#sQuiet')) $('#sQuiet').value = m.quiet_min >= 1440 ? '' : hm(m.quiet_min);
-  $('#sEvery').value = m.remind_every;
   $('#meEmail').textContent = m.email;
   const on = pushOK && Notification.permission === 'granted' && m.pushCount > 0;
   $('#pushDot').classList.toggle('on', on);
@@ -537,12 +528,6 @@ function renderSettings() {
   $('#pushTest').classList.toggle('hidden', !on);
   $('#iosNote').classList.toggle('hidden', !(isIOS && !standalone));
 }
-['#sFrom', '#sEvery', '#sQuiet'].forEach(s => $(s).onchange = async () => {
-  const from = parseTime($('#sFrom').value), quiet = parseTime($('#sQuiet').value);
-  if (from == null || Number.isNaN(from) || Number.isNaN(quiet)) { toast('השעה לא תקינה. כתוב למשל 09:30'); return renderSettings(); }
-  try { S = await api('/settings', { body: { remind_min: from, remind_every: +$('#sEvery').value, quiet_min: quiet == null ? 1440 : quiet } }); render(); toast('נשמר'); }
-  catch (e) { toast(e.message); renderSettings(); }
-});
 async function enablePush() {
   try {
     if (await Notification.requestPermission() !== 'granted') return toast('צריך לאשר התראות כדי שזה יעבוד');
