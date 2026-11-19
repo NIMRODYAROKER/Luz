@@ -132,39 +132,53 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .seg button{flex:1;padding:11px;border-radius:10px;font-weight:700;color:var(--muted);transition:.2s}
 .seg button.on{background:var(--olive);color:#11140d}
 a.btn{text-decoration:none}
-/* טופס משימה: לכל שאלה צורה משלה */
+/* טופס משימה: לכל שאלה צורה משלה, מראה טכנולוגי */
+.tform{counter-reset:q;--neon:#c8dc5a;--glow:0 0 0 1px var(--neon),0 0 16px rgba(200,220,90,.35)}
+.tform .field>span{font-size:12px;letter-spacing:.4px}
+.tform .field>span::before{counter-increment:q;content:counter(q,decimal-leading-zero);font-family:ui-monospace,'SF Mono',Menlo,monospace;color:var(--neon);margin-left:8px;font-weight:700}
+.tform .inp{border-radius:10px}
+.tform .inp:focus{border-color:var(--neon);box-shadow:var(--glow)}
+.tform .btn#fSave{background:var(--neon);border-radius:12px;box-shadow:0 0 22px rgba(200,220,90,.3)}
+.dchips{display:flex;gap:8px}
+.dchips>*{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:48px;border-radius:10px;background:var(--bg2);border:1px solid var(--line2);font-weight:700;font-size:15px;color:var(--muted);transition:.2s}
+.dchips .on{background:var(--neon);border-color:var(--neon);color:#11140d;box-shadow:0 0 16px rgba(200,220,90,.35)}
+.dpick{position:relative;flex:1.4!important;overflow:hidden}
+.dpick .i{width:18px;height:18px}
+.dpick em{font-style:normal;white-space:nowrap}
+.dpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;-webkit-appearance:none;appearance:none}
 .kcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.kcards button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:16px;background:var(--bg2);border:1.5px solid var(--line2);text-align:right;transition:.2s}
+.kcards button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:12px;background:var(--bg2);border:1.5px solid var(--line2);text-align:right;transition:.2s}
 .kcards button .i{width:26px;height:26px;color:var(--muted)}
 .kcards button b{font-size:16px;color:var(--text)}
 .kcards button small{font-size:12px;color:var(--muted);line-height:1.35}
-.kcards button.on{border-color:var(--olive);background:var(--olive-soft)}
-.kcards button.on .i{color:var(--olive2)}
-.kcards button.on.dont{border-color:var(--red);background:var(--red-soft)}
+.kcards button.on{border-color:var(--neon);background:rgba(200,220,90,.14);box-shadow:var(--glow)}
+.kcards button.on .i{color:var(--neon)}
+.kcards button.on.dont{border-color:#ff6a3d;background:rgba(255,106,61,.14);box-shadow:0 0 0 1px #ff6a3d,0 0 16px rgba(255,106,61,.35)}
 .kcards button.on.dont .i{color:#f08a68}
 .tabs{display:flex;border-bottom:1px solid var(--line2)}
 .tabs button{flex:1;padding:10px 2px 12px;font-size:14px;white-space:nowrap;font-weight:700;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:.2s}
-.tabs button.on{color:var(--khaki);border-bottom-color:var(--olive2)}
+.tabs button.on{color:var(--neon);border-bottom-color:var(--neon);text-shadow:0 0 12px rgba(200,220,90,.5)}
 #fDays{justify-content:space-between}
 #fDays button{flex:0 0 auto;width:40px;height:40px;aspect-ratio:auto;border-radius:50%;padding:0}
-.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line2);border-radius:16px;padding:8px}
-.stepper button{width:48px;height:48px;border-radius:12px;background:var(--card2);color:var(--khaki);font-size:26px;font-weight:700;line-height:1}
+#fDays button.on{background:var(--neon);border-color:var(--neon);color:#11140d;box-shadow:0 0 14px rgba(200,220,90,.45)}
+.tform .quick button{border-radius:8px;background:transparent;border:1px solid rgba(200,220,90,.45);color:var(--neon)}
+.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:8px}
+.stepper button{width:48px;height:48px;border-radius:10px;background:var(--neon);color:#11140d;font-size:26px;font-weight:700;line-height:1}
 .stepper button:disabled{opacity:.3}
 .stepper div{text-align:center}
-.stepper b{display:block;font-size:30px;color:var(--olive2);line-height:1.1}
+.stepper b{display:block;font-size:32px;color:var(--neon);line-height:1.1;font-family:ui-monospace,'SF Mono',Menlo,monospace;text-shadow:0 0 14px rgba(200,220,90,.45)}
 .stepper small{font-size:12px;color:var(--muted)}
-.swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;cursor:pointer}
+.swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;cursor:pointer}
 .swrow>span{font-size:15px;color:var(--text)}
 .sw{position:relative;flex:0 0 auto;width:50px;height:30px;border-radius:99px;background:var(--card2);transition:.2s}
 .sw::after{content:'';position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:var(--khaki);transition:.2s}
-.sw.on{background:var(--olive)}
-.sw.on::after{right:23px;background:#fff}
-.inp[type=time]{direction:ltr;text-align:center;font-size:22px;font-weight:700;letter-spacing:1px;margin-top:8px;min-height:56px;-webkit-appearance:none;appearance:none}
-.ckrow{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:14px;border:1.5px dashed var(--line2);color:var(--text);font-size:15px;text-align:right}
+.sw.on{background:var(--neon);box-shadow:0 0 14px rgba(200,220,90,.45)}
+.sw.on::after{right:23px;background:#11140d}
+.inp[type=time]{direction:ltr;text-align:center;font-size:22px;font-family:ui-monospace,'SF Mono',Menlo,monospace;color:var(--neon);font-weight:700;letter-spacing:1px;margin-top:8px;min-height:56px;-webkit-appearance:none;appearance:none}
+.ckrow{display:flex;align-items:center;gap:12px;width:100%;padding:4px 4px;color:var(--text);font-size:15px;text-align:right}
 .ckrow .ck{flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);display:grid;place-items:center}
 .ckrow .ck .i{width:16px;height:16px;opacity:0;color:#11140d}
-.ckrow.on{border-style:solid;border-color:var(--olive)}
-.ckrow.on .ck{background:var(--olive);border-color:var(--olive)}
+.ckrow.on .ck{background:var(--neon);border-color:var(--neon);box-shadow:0 0 12px rgba(200,220,90,.45)}
 .ckrow.on .ck .i{opacity:1}
 .inp[type=date]{direction:ltr;text-align:right;min-height:52px;-webkit-appearance:none;appearance:none}
 .seg.red button.on{background:var(--red);color:#fff}
@@ -500,12 +514,14 @@ function renderTasks() {
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week || t?.on_day ? '0123456' : t?.days || '0123456', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: t?.by_min != null };
-  openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: t?.by_min != null, date: t?.on_day || todayStr() };
+  const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
     <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
-    <label class="field" id="fDateWrap"><span>באיזה תאריך</span><input class="inp" type="date" id="fDate" min="${todayStr()}" value="${t?.on_day || todayStr()}"></label>
+    <div class="field" id="fDateWrap"><span>באיזה תאריך</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
+      <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value="${f.date}"></label></div></div>
     ${t ? '' : `<div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>`}
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
@@ -515,7 +531,7 @@ function editTask(t) {
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
     ${t?.on_day ? `<a class="btn ghost" style="margin-top:8px" href="${calUrl(t)}">${icon('today')}הוסף ליומן באייפון</a>` : ''}
-    ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
+    ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}</div>`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
     const wk = f.week && !f.once, dont = f.kind === 'dont', once = f.once;
@@ -531,6 +547,9 @@ function editTask(t) {
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
     $('#fDaysWrap').classList.toggle('hidden', wk || once);
     $('#fDateWrap').classList.toggle('hidden', !once);
+    const dd = f.date === todayStr() ? '0' : f.date === plusDay(1) ? '1' : null;
+    document.querySelectorAll('#fDateWrap button').forEach(b => b.classList.toggle('on', b.dataset.dd === dd));
+    $('#fDatePick').classList.toggle('on', !dd); $('#fDateLbl').textContent = dd ? 'תאריך אחר' : dateLabel(f.date);
     if ($('#fCalWrap')) { $('#fCalWrap').classList.toggle('hidden', !once); $('#fCal').classList.toggle('on', !!f.cal); }
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
@@ -539,6 +558,8 @@ function editTask(t) {
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
   $('#fBySw').onclick = () => { f.hasBy = !f.hasBy; draw(); };
+  document.querySelectorAll('#fDateWrap button').forEach(b => b.onclick = () => { f.date = plusDay(+b.dataset.dd); $('#fDate').value = f.date; draw(); });
+  $('#fDate').onchange = () => { if ($('#fDate').value) f.date = $('#fDate').value; draw(); };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
   if ($('#fCal')) $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
@@ -551,7 +572,7 @@ function editTask(t) {
     const once = f.once, wk = f.week && !once;
     const by = (f.kind === 'dont' && wk) || !f.hasBy ? null : parseTime($('#fBy').value);
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
-    const on_day = once ? $('#fDate').value : null;
+    const on_day = once ? f.date : null;
     if (once && !on_day) return $('#fErr').textContent = 'בחר תאריך';
     const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by, on_day };
     try {
