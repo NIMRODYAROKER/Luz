@@ -99,10 +99,14 @@ class Limiter {
 function local(t = Date.now()) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
     .formatToParts(new Date(t)).map(x => [x.type, x.value]));
-  const day = `${p.year}-${p.month}-${p.day}`;
+  let day = `${p.year}-${p.month}-${p.day}`;
   const hour = Number(p.hour) % 24;
-  return { day, dow: new Date(day + 'T12:00:00Z').getUTCDay(), hour, min: hour * 60 + Number(p.minute) };
+  let min = hour * 60 + Number(p.minute);
+  // היום מתחלף ב-05:00 ולא בחצות: בין 00:00 ל-05:00 זה עדיין היום הקודם (והשעה נספרת כ-24:00 ומעלה)
+  if (hour < DAY_START) { day = addDays(day, -1); min += 1440; }
+  return { day, dow: new Date(day + 'T12:00:00Z').getUTCDay(), hour, min };
 }
+const DAY_START = 5;
 const addDays = (day, n) => { const d = new Date(day + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const hm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const dowOf = (day) => new Date(day + 'T12:00:00Z').getUTCDay();
@@ -324,7 +328,8 @@ export class LuzDB extends DurableObject {
   }
   // התראות: לכל משימה פתוחה התראה נפרדת משלה, כל שעה עגולה מ-10:00 עד 01:00, עד שמסמנים אותה. שקט בין 2:00 ל-10:00.
   notePoint(t, min) {
-    if (min >= 120 && min < 600) return null;
+    const m = min % 1440;
+    if (m >= 120 && m < 600) return null;
     return Math.floor(min / 60) * 60;
   }
   async cron() {
