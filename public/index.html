@@ -251,9 +251,13 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 /* חלון תחתון */
 .sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(5,7,3,.6);opacity:0;pointer-events:none;transition:opacity .25s}
 .sheet-bg.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;z-index:41;inset-inline:0;bottom:0;margin:0 auto;max-width:520px;max-height:92dvh;overflow:auto;background:var(--bg2);border:1px solid var(--line2);border-bottom:0;border-radius:26px 26px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);transform:translateY(105%);transition:transform .35s var(--ease)}
+.sheet{position:fixed;z-index:41;inset-inline:0;bottom:0;margin:0 auto;max-width:520px;max-height:calc(100dvh - env(safe-area-inset-top) - 56px);overflow:auto;overscroll-behavior:contain;background:var(--bg2);border:1px solid var(--line2);border-bottom:0;border-radius:26px 26px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);transform:translateY(105%);transition:transform .35s var(--ease)}
 .sheet.on{transform:none}
 .sheet .grab{width:42px;height:5px;border-radius:3px;background:var(--line2);margin:0 auto 12px}
+.sheet .shead{position:sticky;top:-10px;z-index:2;margin:-10px -18px 0;padding:10px 18px 2px;background:var(--bg2);touch-action:none}
+.sheet .sx{position:absolute;top:8px;left:12px;width:36px;height:36px;border-radius:50%;background:var(--card2);border:1px solid var(--line2);display:grid;place-items:center;color:var(--text)}
+.sheet .sx .i{width:18px;height:18px}
+.sheet.drag{transition:none}
 .sheet h2{margin-top:0}
 .steps{list-style:none;counter-reset:s;margin:6px 0 14px}
 .steps li{counter-increment:s;position:relative;padding:0 40px 14px 0;font-size:15px}
@@ -373,7 +377,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 </div></nav>
 
 <div class="sheet-bg" id="sheetBg"></div>
-<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="sheet" id="sheet"><div class="shead" id="sheetHead"><div class="grab"></div><button class="sx" id="sheetX" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button></div><div id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -816,8 +820,29 @@ document.querySelectorAll('.nav button').forEach(b => b.onclick = () => {
   scrollTo(0, 0);
 });
 $('#addBtn').onclick = () => editTask(null);
-function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').classList.add('on'); $('#sheetBg').classList.add('on'); }
-function closeSheet() { $('#sheet').classList.remove('on'); $('#sheetBg').classList.remove('on'); }
+function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').scrollTop = 0; $('#sheet').classList.add('on'); $('#sheetBg').classList.add('on'); }
+function closeSheet() { const sh = $('#sheet'); sh.classList.remove('on', 'drag'); sh.style.transform = ''; $('#sheetBg').classList.remove('on'); }
+$('#sheetX').onclick = closeSheet;
+// גרירה למטה סוגרת את החלון: מהפס העליון, או מכל מקום כשהחלון גלול למעלה
+(() => {
+  const sh = $('#sheet'); let y0 = null, dy = 0;
+  sh.addEventListener('touchstart', (e) => {
+    const fromHead = e.target.closest('#sheetHead') && !e.target.closest('#sheetX');
+    const field = e.target.closest('input,textarea,select');
+    y0 = (fromHead || (sh.scrollTop <= 0 && !field)) ? e.touches[0].clientY : null; dy = 0;
+  }, { passive: true });
+  sh.addEventListener('touchmove', (e) => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy > 0 && (sh.scrollTop <= 0 || e.target.closest('#sheetHead'))) { e.preventDefault(); sh.classList.add('drag'); sh.style.transform = `translateY(${dy}px)`; }
+    else if (dy < 0 && !sh.classList.contains('drag')) y0 = null;
+  }, { passive: false });
+  sh.addEventListener('touchend', () => {
+    if (y0 == null) return; y0 = null;
+    sh.classList.remove('drag');
+    if (dy > 90) closeSheet(); else sh.style.transform = '';
+  });
+})();
 $('#sheetBg').onclick = closeSheet;
 
 // רענון כשחוזרים לאפליקציה (למשל אחרי חצות או מהתראה)
