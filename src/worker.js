@@ -303,53 +303,32 @@ export class LuzDB extends DurableObject {
     for (const s of subs) { try { out.push(await this.sendPush(s, msg)); } catch (e) { console.error('push', e); out.push(0); } }
     return out;
   }
-  // התראות אוטומטיות לכל משימה, בלי הגדרות:
-  // משימה עם שעה – שעתיים, שעה, חצי שעה ורבע שעה לפני, בזמן, ואחרי זה כל רבע שעה עד שמסמנים.
-  // משימה בלי שעה – מ-9 בבוקר כל שעתיים, מ-18 כל שעה, מ-21 כל חצי שעה. שקט בין 23:30 ל-7:00.
+  // התראות: לכל משימה פתוחה התראה נפרדת משלה, כל שעה עגולה מ-9:00 עד 23:00, עד שמסמנים אותה. שקט בין 23:30 ל-9:00.
   notePoint(t, min) {
-    const QUIET = 1410;
-    if (t.by_min != null) {
-      const D = t.by_min;
-      if (min >= D) { const end = Math.max(QUIET, D + 60); return min < end ? D + Math.floor((min - D) / 15) * 15 : null; }
-      const pts = [D - 120, D - 60, D - 30, D - 15].filter(p => p <= min && p >= 0 && (p >= 420 || D < 600));
-      return pts.length ? pts[pts.length - 1] : null;
-    }
-    if (min < 540 || min >= QUIET) return null;
-    if (min < 1080) return 540 + Math.floor((min - 540) / 120) * 120;
-    if (min < 1260) return 1080 + Math.floor((min - 1080) / 60) * 60;
-    return 1260 + Math.floor((min - 1260) / 30) * 30;
+    if (min < 540 || min >= 1410) return null;
+    return Math.floor(min / 60) * 60;
   }
   async cron() {
     const l = local(), now = Date.now();
     for (const u of this.q('SELECT u.* FROM users u WHERE EXISTS (SELECT 1 FROM subs s WHERE s.user_id = u.id)')) {
       const r = this.dayResult(u.id, l.day);
       if (!r.open.length) continue;
-      const due = [];
+      let sent = false;
       for (const t of r.open) {
         const p = this.notePoint(t, l.min);
         if (p == null || l.min - p > 30) continue;
         const key = 'note:' + t.id, mark = l.day + '|' + p;
         if (this.kvGet(key) === mark) continue;
-        due.push({ t, p, key, mark });
+        let msg;
+        if (t.by_min != null && l.min >= t.by_min) msg = { title: `${t.title} – עבר הזמן`, body: `היה צריך להיות גמור עד ${hm(t.by_min)}. קום ותעשה.` };
+        else if (t.by_min != null) msg = { title: t.title, body: `צריך להיות גמור עד ${hm(t.by_min)}. אל תדחה.` };
+        else msg = { title: t.title, body: 'עוד לא סימנת שעשית. אני לא עוזב אותך עד שזה נגמר.' };
+        msg.tag = 'luz-' + t.id;
+        this.kvSet(key, mark);
+        sent = true;
+        await this.pushUser(u.id, msg);
       }
-      if (!due.length || now - u.last_push < 4 * 60e3) continue;
-      const late = due.filter(x => x.t.by_min != null && l.min >= x.t.by_min);
-      const soon = due.filter(x => x.t.by_min != null && l.min < x.t.by_min).sort((a, b) => a.t.by_min - b.t.by_min);
-      const others = r.open.map(t => t.title);
-      let msg;
-      if (late.length) {
-        const names = late.slice(0, 3).map(x => x.t.title).join(', ');
-        msg = { title: 'עבר הזמן', body: `${names} – היה צריך להיות גמור עד ${hm(late[0].t.by_min)}. קום ותעשה.` };
-      } else if (soon.length) {
-        const t = soon[0].t, left = t.by_min - l.min;
-        const when = left <= 20 ? 'רבע שעה' : left <= 40 ? 'חצי שעה' : left <= 75 ? 'שעה' : 'שעתיים';
-        msg = { title: `${t.title} – עוד ${when}`, body: left <= 20 ? `עד ${hm(t.by_min)}. עכשיו או אף פעם.` : `צריך להיות גמור עד ${hm(t.by_min)}. זה הזמן להתחיל.` };
-      } else {
-        msg = { title: `נשארו ${r.open.length} משימות`, body: `${others.slice(0, 3).join(', ')}. אני לא עוזב אותך עד שזה נגמר.` };
-      }
-      for (const x of due) this.kvSet(x.key, x.mark);
-      this.sql.exec('UPDATE users SET last_push = ? WHERE id = ?', now, u.id);
-      await this.pushUser(u.id, msg);
+      if (sent) this.sql.exec('UPDATE users SET last_push = ? WHERE id = ?', now, u.id);
     }
   }
 

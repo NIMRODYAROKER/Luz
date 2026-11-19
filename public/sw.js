@@ -5,7 +5,7 @@ self.addEventListener('push', (e) => {
   let d = { title: 'Luz', body: 'יש לך משימות פתוחות' };
   try { d = e.data.json(); } catch {}
   e.waitUntil(self.registration.showNotification(d.title, {
-    body: d.body, icon: '/icon-192.png', badge: '/icon-192.png', tag: 'luz', renotify: true, lang: 'he', dir: 'rtl'
+    body: d.body, icon: '/icon-192.png', badge: '/icon-192.png', tag: d.tag || 'luz', renotify: true, lang: 'he', dir: 'rtl'
   }));
 });
 self.addEventListener('notificationclick', (e) => {
