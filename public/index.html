@@ -206,6 +206,23 @@ a.btn{text-decoration:none}
 .mtask .t span{font-size:13px;color:var(--muted)}
 .tag{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;background:var(--olive-soft);color:var(--olive2)}
 .tag.red{background:var(--red-soft);color:#f08a68}
+/* תצוגה לפי ימים */
+.tmode{margin-bottom:14px}
+.dayblk{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px 14px 8px;margin-bottom:12px}
+.dayblk.now{border-color:rgba(138,155,63,.45);box-shadow:inset 0 0 0 1px rgba(138,155,63,.15)}
+.dayhd{display:flex;align-items:baseline;gap:8px;padding:10px 2px 8px;border-bottom:1px solid var(--line)}
+.dayhd b{font-family:var(--head);font-weight:400;font-size:19px}
+.dayblk.now .dayhd b{color:var(--olive2)}
+.dayhd span{color:var(--muted);font-size:13px}
+.dayhd em{margin-inline-start:auto;font-style:normal;font-size:12px;font-weight:700;color:var(--muted)}
+.drow{display:flex;align-items:center;gap:12px;width:100%;text-align:right;padding:11px 2px;border-bottom:1px solid var(--line)}
+.drow:last-child{border-bottom:0}
+.drow .tm{flex:none;width:50px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14px;font-weight:700;color:var(--khaki);direction:ltr;text-align:center}
+.drow .tm.no{direction:rtl;color:var(--muted);font-family:var(--body);font-size:12px;font-weight:500}
+.drow .t{flex:1;min-width:0;font-weight:700}
+.drow .t small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.drow.ok .t{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(214,201,154,.35)}
+.dfree{color:var(--muted);font-size:14px;padding:12px 2px}
 
 /* ניווט תחתון */
 .nav{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
@@ -300,6 +317,7 @@ a.btn{text-decoration:none}
 
   <section id="v-tasks" class="view hidden">
     <h2>המשימות שלי</h2>
+    <div class="seg tmode" id="tMode"><button data-tm="days">לפי ימים</button><button data-tm="all">כל המשימות</button></div>
     <div id="allList"></div>
   </section>
 
@@ -365,7 +383,7 @@ function timeInput(el) {
   });
   el.addEventListener('blur', () => { const t = parseTime(el.value); if (t != null && !isNaN(t)) el.value = hm(t); });
 }
-let token = null, S = null, view = 'today', signup = false;
+let token = null, S = null, view = 'today', signup = false, tMode = 'days';
 try { token = localStorage.getItem('luz_token'); } catch {}
 
 async function api(path, opts = {}) {
@@ -508,10 +526,37 @@ const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_da
 const freqLabel = (t) => t.on_day ? 'חד פעמי · ' + dateLabel(t.on_day) : t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
+  $('#tMode').classList.toggle('hidden', !S.tasks.length);
+  document.querySelectorAll('#tMode button').forEach(b => b.classList.toggle('on', b.dataset.tm === tMode));
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
+  if (tMode === 'days') return renderByDay(el);
   el.innerHTML = S.tasks.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
     <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('');
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
+}
+document.querySelectorAll('#tMode button').forEach(b => b.onclick = () => { tMode = b.dataset.tm; renderTasks(); });
+// 7 הימים הקרובים, לכל יום המשימות שלו לפי שעה
+function renderByDay(el) {
+  const today = todayStr(), byTime = (a, b) => (a.by_min ?? 9999) - (b.by_min ?? 9999);
+  const weekly = S.tasks.filter(t => t.per_week && !t.on_day);
+  const row = (t, d) => {
+    const ok = d === today && t.kind === 'do' && S.today.checks[t.id] === 'done';
+    return `<button class="drow ${ok ? 'ok' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
+      <span class="t">${esc(t.title)}${t.on_day ? '<small>חד פעמי</small>' : ''}</span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`;
+  };
+  let html = '';
+  if (weekly.length) html += `<div class="dayblk"><div class="dayhd"><b>במהלך השבוע</b><span>אתה בוחר באילו ימים</span></div>` +
+    weekly.map(t => `<button class="drow" data-id="${t.id}"><span class="tm no">${t.kind === 'dont' ? 'עד ' + t.per_week : t.per_week === 1 ? 'פעם' : t.per_week + ' פעמים'}</span><span class="t">${esc(t.title)}<small>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('') + '</div>';
+  for (let i = 0; i < 7; i++) {
+    const x = new Date(today + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + i);
+    const d = x.toISOString().slice(0, 10), dow = x.getUTCDay();
+    const list = S.tasks.filter(t => t.on_day ? t.on_day === d : !t.per_week && t.days.includes(String(dow))).sort(byTime);
+    const name = i === 0 ? 'היום' : i === 1 ? 'מחר' : 'יום ' + DAY_NAMES[dow];
+    html += `<div class="dayblk ${i === 0 ? 'now' : ''}"><div class="dayhd"><b>${name}</b><span>${i < 2 ? DAY_NAMES[dow] + ', ' : ''}${x.getUTCDate()}.${x.getUTCMonth() + 1}</span><em>${list.length === 1 ? 'משימה אחת' : list.length ? list.length + ' משימות' : ''}</em></div>` +
+      (list.length ? list.map(t => row(t, d)).join('') : '<div class="dfree">יום פנוי</div>') + '</div>';
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.drow').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 function editTask(t) {
   const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: t?.by_min != null, date: t?.on_day || todayStr() };
