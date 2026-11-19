@@ -236,6 +236,8 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .drow .tm.no{direction:rtl;color:var(--muted);font-family:var(--body);font-size:12px;font-weight:500}
 .drow .t{flex:1;min-width:0;font-weight:700}
 .drow .t small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.drow.once{background:linear-gradient(90deg,transparent,rgba(226,134,47,.13));border-radius:12px;padding-inline:8px;margin-inline:-6px;width:calc(100% + 12px)}
+.drow.once .t small{color:var(--warn);font-weight:700}
 .drow.ok .t{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(214,201,154,.35)}
 .dfree{color:var(--muted);font-size:14px;padding:12px 2px}
 
@@ -607,7 +609,7 @@ function renderByDay(el) {
   const weekly = S.tasks.filter(t => t.per_week && !t.on_day);
   const row = (t, d) => {
     const ok = d === today && t.kind === 'do' && S.today.checks[t.id] === 'done';
-    return `<button class="drow ${ok ? 'ok' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
+    return `<button class="drow ${ok ? 'ok' : ''} ${t.on_day ? 'once' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
       <span class="t">${esc(t.title)}<small>${t.on_day ? 'חד פעמי' : 'קבוע'}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`;
   };
   let html = '';
