@@ -542,7 +542,7 @@ function renderByDay(el) {
   const row = (t, d) => {
     const ok = d === today && t.kind === 'do' && S.today.checks[t.id] === 'done';
     return `<button class="drow ${ok ? 'ok' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
-      <span class="t">${esc(t.title)}${t.on_day ? '<small>חד פעמי</small>' : ''}</span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`;
+      <span class="t">${esc(t.title)}<small>${t.on_day ? 'חד פעמי' : 'קבוע'}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`;
   };
   let html = '';
   if (weekly.length) html += `<div class="dayblk"><div class="dayhd"><b>במהלך השבוע</b><span>אתה בוחר באילו ימים</span></div>` +
