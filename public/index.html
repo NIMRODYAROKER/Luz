@@ -131,8 +131,41 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .seg{display:flex;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:4px;gap:4px}
 .seg button{flex:1;padding:11px;border-radius:10px;font-weight:700;color:var(--muted);transition:.2s}
 .seg button.on{background:var(--olive);color:#11140d}
-#fMode button{padding:11px 4px;font-size:14px}
 a.btn{text-decoration:none}
+/* טופס משימה: לכל שאלה צורה משלה */
+.kcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kcards button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:16px;background:var(--bg2);border:1.5px solid var(--line2);text-align:right;transition:.2s}
+.kcards button .i{width:26px;height:26px;color:var(--muted)}
+.kcards button b{font-size:16px;color:var(--text)}
+.kcards button small{font-size:12px;color:var(--muted);line-height:1.35}
+.kcards button.on{border-color:var(--olive);background:var(--olive-soft)}
+.kcards button.on .i{color:var(--olive2)}
+.kcards button.on.dont{border-color:var(--red);background:var(--red-soft)}
+.kcards button.on.dont .i{color:#f08a68}
+.tabs{display:flex;border-bottom:1px solid var(--line2)}
+.tabs button{flex:1;padding:10px 2px 12px;font-size:14px;white-space:nowrap;font-weight:700;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:.2s}
+.tabs button.on{color:var(--khaki);border-bottom-color:var(--olive2)}
+#fDays{justify-content:space-between}
+#fDays button{flex:0 0 auto;width:40px;height:40px;aspect-ratio:auto;border-radius:50%;padding:0}
+.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--line2);border-radius:16px;padding:8px}
+.stepper button{width:48px;height:48px;border-radius:12px;background:var(--card2);color:var(--khaki);font-size:26px;font-weight:700;line-height:1}
+.stepper button:disabled{opacity:.3}
+.stepper div{text-align:center}
+.stepper b{display:block;font-size:30px;color:var(--olive2);line-height:1.1}
+.stepper small{font-size:12px;color:var(--muted)}
+.swrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;cursor:pointer}
+.swrow>span{font-size:15px;color:var(--text)}
+.sw{position:relative;flex:0 0 auto;width:50px;height:30px;border-radius:99px;background:var(--card2);transition:.2s}
+.sw::after{content:'';position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:var(--khaki);transition:.2s}
+.sw.on{background:var(--olive)}
+.sw.on::after{right:23px;background:#fff}
+.inp[type=time]{direction:ltr;text-align:center;font-size:22px;font-weight:700;letter-spacing:1px;margin-top:8px;min-height:56px;-webkit-appearance:none;appearance:none}
+.ckrow{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:14px;border:1.5px dashed var(--line2);color:var(--text);font-size:15px;text-align:right}
+.ckrow .ck{flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);display:grid;place-items:center}
+.ckrow .ck .i{width:16px;height:16px;opacity:0;color:#11140d}
+.ckrow.on{border-style:solid;border-color:var(--olive)}
+.ckrow.on .ck{background:var(--olive);border-color:var(--olive)}
+.ckrow.on .ck .i{opacity:1}
 .inp[type=date]{direction:ltr;text-align:right;min-height:52px;-webkit-appearance:none;appearance:none}
 .seg.red button.on{background:var(--red);color:#fff}
 .days{display:flex;gap:6px}
@@ -467,44 +500,47 @@ function renderTasks() {
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week || t?.on_day ? '0123456' : t?.days || '0123456', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3 };
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t?.per_week || t?.on_day ? '0123456' : t?.days || '0123456', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: t?.by_min != null };
   openSheet(`<h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
-    <div class="field"><span>סוג</span><div class="seg" id="fKind"><button data-k="do">לעשות</button><button data-k="dont">לא לעשות</button></div></div>
-    <div class="field" id="fModeWrap"><span>מתי</span><div class="seg" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
+    <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
+    <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
     <label class="field" id="fDateWrap"><span>באיזה תאריך</span><input class="inp" type="date" id="fDate" min="${todayStr()}" value="${t?.on_day || todayStr()}"></label>
-    ${t ? '' : '<div class="field" id="fCalWrap"><span>להוסיף גם ליומן באייפון?</span><div class="seg" id="fCal"><button data-c="0">לא</button><button data-c="1">כן</button></div></div>'}
+    ${t ? '' : `<div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>`}
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
-    <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="days" id="fN">${[1, 2, 3, 4, 5, 6, 7].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div></div>
-    <label class="field" id="fByWrap"><span id="fByLbl"></span><input class="inp time" id="fBy" inputmode="numeric" maxlength="5" placeholder="למשל 14:30 – או ריק בלי שעה" value="${t?.by_min != null ? hm(t.by_min) : ''}"></label>
+    <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="stepper"><button id="fNPlus" aria-label="עוד">+</button><div><b id="fNNum"></b><small>בשבוע</small></div><button id="fNMinus" aria-label="פחות">−</button></div></div>
+    <div class="field" id="fByWrap"><div class="swrow" id="fBySw"><span id="fByLbl"></span><i class="sw"></i></div>
+      <input class="inp" type="time" id="fBy" value="${t?.by_min != null ? hm(t.by_min) : '20:00'}"></div>
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
     ${t?.on_day ? `<a class="btn ghost" style="margin-top:8px" href="${calUrl(t)}">${icon('today')}הוסף ליומן באייפון</a>` : ''}
     ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
-    $('#fKind').classList.toggle('red', f.kind === 'dont');
     const wk = f.week && !f.once, dont = f.kind === 'dont', once = f.once;
     if (!dont && f.n > 6) f.n = 6;
-    $('#fWeekBtn').textContent = dont ? 'מוגבל לכמה פעמים' : 'כמה פעמים בשבוע';
+    $('#fWeekBtn').textContent = dont ? 'מוגבל בשבוע' : 'כמה בשבוע';
     $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע (אתה בוחר באילו ימים)';
-    $('#fByLbl').textContent = dont ? 'עד איזו שעה לא (אחריה זה נחשב הצלחה) – ריק = כל היום' : 'עד איזו שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)';
-    document.querySelector('#fN button[data-n="7"]').classList.toggle('hidden', !dont);
+    $('#fByLbl').textContent = dont ? (f.hasBy ? 'רק עד שעה מסוימת (אחריה זה הצלחה)' : 'כל היום – אפשר להגביל עד שעה') : (f.hasBy ? 'עד שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)' : 'בלי שעה – אפשר לקבוע עד איזו שעה');
+    $('#fBySw .sw').classList.toggle('on', f.hasBy);
+    $('#fBy').classList.toggle('hidden', !f.hasBy);
+    const maxN = dont ? 7 : 6;
+    $('#fNNum').textContent = f.n; $('#fNPlus').disabled = f.n >= maxN; $('#fNMinus').disabled = f.n <= 1;
     document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.m === (once ? 'once' : wk ? 'week' : 'days')));
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
-    document.querySelectorAll('#fN button').forEach(b => b.classList.toggle('on', +b.dataset.n === f.n));
     $('#fDaysWrap').classList.toggle('hidden', wk || once);
     $('#fDateWrap').classList.toggle('hidden', !once);
-    if ($('#fCalWrap')) { $('#fCalWrap').classList.toggle('hidden', !once); document.querySelectorAll('#fCal button').forEach(b => b.classList.toggle('on', +b.dataset.c === +!!f.cal)); }
+    if ($('#fCalWrap')) { $('#fCalWrap').classList.toggle('hidden', !once); $('#fCal').classList.toggle('on', !!f.cal); }
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
-  timeInput($('#fBy'));
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
-  document.querySelectorAll('#fN button').forEach(b => b.onclick = () => { f.n = +b.dataset.n; draw(); });
+  $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
+  $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
+  $('#fBySw').onclick = () => { f.hasBy = !f.hasBy; draw(); };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
-  document.querySelectorAll('#fCal button').forEach(b => b.onclick = () => { f.cal = b.dataset.c === '1'; draw(); });
+  if ($('#fCal')) $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
     const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
   });
@@ -513,7 +549,7 @@ function editTask(t) {
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
     const once = f.once, wk = f.week && !once;
-    const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
+    const by = (f.kind === 'dont' && wk) || !f.hasBy ? null : parseTime($('#fBy').value);
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
     const on_day = once ? $('#fDate').value : null;
     if (once && !on_day) return $('#fErr').textContent = 'בחר תאריך';
