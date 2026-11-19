@@ -313,6 +313,15 @@ export class LuzDB extends DurableObject {
     for (const s of subs) { try { out.push(await this.sendPush(s, msg)); } catch (e) { console.error('push', e); out.push(0); } }
     return out;
   }
+  // התראה מיידית כשנכנסים לאינסטגרם/טיקטוק בזמן נעילה. לא יותר מפעם ב-15 שניות
+  async gatePush(u) {
+    const key = 'gatepush:' + u.id, now = Date.now();
+    if (now - Number(this.kvGet(key) || 0) < 15e3) return;
+    this.kvSet(key, String(now));
+    const l = local(), late = this.dayResult(u.id, l.day).open.filter(t => t.by_min != null && l.min >= t.by_min);
+    const names = late.slice(0, 3).map(t => t.title).join(', ') + (late.length > 3 ? ` ועוד ${late.length - 3}` : '');
+    await this.pushUser(u.id, { title: 'Luz נעול', body: `קודם תסיים: ${names}. לחץ כאן.`, tag: 'luz-gate' });
+  }
   // התראות: לכל משימה פתוחה התראה נפרדת משלה, כל שעה עגולה מ-10:00 עד 01:00, עד שמסמנים אותה. שקט בין 2:00 ל-10:00.
   notePoint(t, min) {
     if (min >= 120 && min < 600) return null;
@@ -355,7 +364,10 @@ export class LuzDB extends DurableObject {
       if (this.limiter.over('gate:' + ip, 120, 60e3)) return text('open');
       this.limiter.add('gate:' + ip, 60e3);
       const u = this.one('SELECT * FROM users WHERE gate_key = ?', m[1]);
-      return text(u && this.locked(u) ? 'locked' : 'open');
+      if (!u || !this.locked(u)) return text('open');
+      // נעול: שולחים מיד התראה. לחיצה עליה פותחת את Luz כאפליקציה (לא בספארי)
+      await this.gatePush(u);
+      return text('locked');
     }
 
     if (method !== 'GET' && method !== 'POST' && method !== 'PUT' && method !== 'DELETE') throw new HttpError(405, 'לא נתמך');
