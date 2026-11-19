@@ -62,7 +62,7 @@ function withSecurityHeaders(res) {
 }
 
 // ---------- עזרים ----------
-const SESSION_DAYS = 90, MIN_PASS = 6, MAX_TASKS = 40;
+const SESSION_DAYS = 90, MIN_PASS = 6, MAX_TASKS = 40, MAX_IMG = 1500000, MAX_IMGS = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 const bad = (msg) => { throw new HttpError(400, msg); };
@@ -162,12 +162,15 @@ export class LuzDB extends DurableObject {
       CREATE INDEX IF NOT EXISTS tasks_user ON tasks(user_id);
       CREATE INDEX IF NOT EXISTS checks_user ON checks(user_id, day);
       CREATE INDEX IF NOT EXISTS subs_user ON subs(user_id);
+      CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, task_id TEXT NOT NULL, user_id INTEGER NOT NULL, mime TEXT NOT NULL, data BLOB NOT NULL, created INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS images_task ON images(task_id);
     `);
     // עמודות חדשות: שעה עם דקות, X פעמים בשבוע. ממלאים מהנתונים הקיימים בלי למחוק כלום
     const addCol = (tbl, def, fill) => { try { this.sql.exec(`ALTER TABLE ${tbl} ADD COLUMN ${def}`); if (fill) this.sql.exec(fill); } catch {} };
     addCol('tasks', 'by_min INTEGER', 'UPDATE tasks SET by_min = by_hour * 60 WHERE by_hour IS NOT NULL');
     addCol('tasks', 'per_week INTEGER');
     addCol('tasks', 'on_day TEXT');
+    addCol('tasks', 'note TEXT');
     addCol('checks', 'n INTEGER NOT NULL DEFAULT 1');
     addCol('users', 'remind_min INTEGER NOT NULL DEFAULT 540', 'UPDATE users SET remind_min = remind_from * 60');
     addCol('users', 'quiet_min INTEGER NOT NULL DEFAULT 1380', 'UPDATE users SET quiet_min = quiet_from * 60');
@@ -252,11 +255,18 @@ export class LuzDB extends DurableObject {
   kvSet(k, v) { this.sql.exec('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v', k, v); }
 
   // משימה חד פעמית שהתאריך שלה עבר יורדת מהרשימה (נשארת בהיסטוריה של אותו יום)
-  closeOnce(uid) { this.sql.exec('UPDATE tasks SET to_day = date(on_day, \'+1 day\') WHERE user_id = ? AND on_day IS NOT NULL AND on_day < ? AND to_day IS NULL', uid, local().day); }
+  closeOnce(uid) {
+    this.sql.exec('UPDATE tasks SET to_day = date(on_day, \'+1 day\') WHERE user_id = ? AND on_day IS NOT NULL AND on_day < ? AND to_day IS NULL', uid, local().day);
+    // תמונות של משימות שכבר לא פעילות לא נשמרות סתם
+    this.sql.exec('DELETE FROM images WHERE user_id = ? AND task_id NOT IN (SELECT id FROM tasks WHERE user_id = ? AND to_day IS NULL)', uid, uid);
+  }
+  // רשימת התמונות של כל משימה (רק מזהים, התמונה עצמה נטענת בנפרד)
+  imgMap(uid) { const m = {}; for (const r of this.q('SELECT id, task_id FROM images WHERE user_id = ? ORDER BY created', uid)) (m[r.task_id] ||= []).push(r.id); return m; }
   state(u) {
     this.closeOnce(u.id);
     const l = local(), r = this.dayResult(u.id, l.day);
     const all = this.q('SELECT * FROM tasks WHERE user_id = ? AND to_day IS NULL ORDER BY sort, created', u.id);
+    const im = this.imgMap(u.id), pub = (t) => ({ ...pubTask(t), imgs: im[t.id] || [] });
     // שבוע אחרון לתצוגה
     const week = [];
     for (let i = 6; i >= 0; i--) {
@@ -269,8 +279,8 @@ export class LuzDB extends DurableObject {
       me: { email: u.email, gate: u.gate_key, remind_min: u.remind_min, remind_every: u.remind_every, quiet_min: u.quiet_min,
         pushCount: this.one('SELECT COUNT(*) AS c FROM subs WHERE user_id = ?', u.id).c },
       today: { day: l.day, dow: l.dow, hour: l.hour, min: l.min, checks: r.checks, locked: this.locked(u, l),
-        tasks: r.tasks.map(t => ({ ...pubTask(t), ...(t.per_week ? t.kind === 'dont' ? { week_used: t.used } : { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
-      tasks: all.map(pubTask), week, ...this.streak(u)
+        tasks: r.tasks.map(t => ({ ...pub(t), ...(t.per_week ? t.kind === 'dont' ? { week_used: t.used } : { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
+      tasks: all.map(pub), week, ...this.streak(u)
     };
   }
   async vapid() {
@@ -351,6 +361,32 @@ export class LuzDB extends DurableObject {
     if (method !== 'GET' && method !== 'POST' && method !== 'PUT' && method !== 'DELETE') throw new HttpError(405, 'לא נתמך');
     if (this.limiter.over('all:' + ip, 300, 60e3)) throw new HttpError(429, 'יותר מדי בקשות. חכה רגע');
     this.limiter.add('all:' + ip, 60e3);
+    // תמונה לפירוט של משימה: נשלחת כקובץ ולא כטקסט
+    m = path.match(/^\/api\/tasks\/([A-Za-z0-9_-]{6,20})\/img$/);
+    if (m && method === 'POST') {
+      const u = this.auth(request);
+      if (this.limiter.over('img:' + u.id, 40, 3600e3)) throw new HttpError(429, 'יותר מדי תמונות. נסה מאוחר יותר');
+      const task = this.one('SELECT id FROM tasks WHERE id = ? AND user_id = ? AND to_day IS NULL', m[1], u.id);
+      if (!task) throw new HttpError(404, 'המשימה לא נמצאה');
+      if (Number(request.headers.get('content-length') || 0) > MAX_IMG) bad('התמונה גדולה מדי');
+      const data = new Uint8Array(await request.arrayBuffer());
+      if (!data.length || data.length > MAX_IMG) bad('התמונה גדולה מדי');
+      const mime = imgType(data);
+      if (!mime) bad('אפשר לצרף רק תמונות');
+      if (this.one('SELECT COUNT(*) AS c FROM images WHERE task_id = ?', task.id).c >= MAX_IMGS) bad(`אפשר עד ${MAX_IMGS} תמונות למשימה`);
+      this.limiter.add('img:' + u.id, 3600e3);
+      this.sql.exec('INSERT INTO images (id, task_id, user_id, mime, data, created) VALUES (?, ?, ?, ?, ?, ?)', randomId(12), task.id, u.id, mime, data.buffer, Date.now());
+      return json(this.state(u));
+    }
+    m = path.match(/^\/api\/img\/([A-Za-z0-9_-]{10,24})$/);
+    if (m && (method === 'GET' || method === 'DELETE')) {
+      const u = this.auth(request);
+      const img = this.one('SELECT id, mime, data FROM images WHERE id = ? AND user_id = ?', m[1], u.id);
+      if (!img) throw new HttpError(404, 'התמונה לא נמצאה');
+      if (method === 'DELETE') { this.sql.exec('DELETE FROM images WHERE id = ?', img.id); return json(this.state(u)); }
+      return new Response(img.data, { headers: { 'content-type': img.mime, 'cache-control': 'private, max-age=31536000, immutable', 'content-disposition': 'inline' } });
+    }
+
     let body = {};
     if (method === 'POST' || method === 'PUT') {
       const raw = await request.text();
@@ -400,9 +436,10 @@ export class LuzDB extends DurableObject {
       this.closeOnce(u.id);
       if (this.one('SELECT COUNT(*) AS c FROM tasks WHERE user_id = ? AND to_day IS NULL', u.id).c >= MAX_TASKS) bad('יותר מדי משימות');
       const maxSort = this.one('SELECT MAX(sort) AS s FROM tasks WHERE user_id = ?', u.id).s || 0;
-      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        randomId(9), u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, maxSort + 1, local().day, Date.now());
-      return json(this.state(u));
+      const nid = randomId(9);
+      this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, note, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, t.note, maxSort + 1, local().day, Date.now());
+      return json({ ...this.state(u), created: nid });
     }
     m = path.match(/^\/api\/tasks\/([A-Za-z0-9_-]{6,20})$/);
     if (m) {
@@ -411,6 +448,7 @@ export class LuzDB extends DurableObject {
       const today = local().day;
       if (method === 'DELETE') {
         // ימים קודמים נשארים בהיסטוריה; מהיום המשימה לא קיימת
+        this.sql.exec('DELETE FROM images WHERE task_id = ?', task.id);
         if (task.from_day >= today) { this.sql.exec('DELETE FROM tasks WHERE id = ?', task.id); this.sql.exec('DELETE FROM checks WHERE task_id = ?', task.id); }
         else this.sql.exec('UPDATE tasks SET to_day = ? WHERE id = ?', today, task.id);
         return json(this.state(u));
@@ -418,14 +456,15 @@ export class LuzDB extends DurableObject {
       if (method === 'PUT') {
         const t = cleanTask(body);
         if (task.from_day >= today || (t.kind === task.kind && t.days === task.days && t.per_week === (task.per_week ?? null) && t.on_day === (task.on_day ?? null))) {
-          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, per_week = ?, by_hour = ?, by_min = ?, on_day = ? WHERE id = ?', t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, task.id);
+          this.sql.exec('UPDATE tasks SET title = ?, kind = ?, days = ?, per_week = ?, by_hour = ?, by_min = ?, on_day = ?, note = ? WHERE id = ?', t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, t.note, task.id);
         } else {
           // שינוי ימים/סוג חל מהיום והלאה, בלי לשנות את העבר
           const nid = randomId(9);
           this.sql.exec('UPDATE tasks SET to_day = ? WHERE id = ?', today, task.id);
-          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, task.sort, today, Date.now());
+          this.sql.exec('INSERT INTO tasks (id, user_id, title, kind, days, per_week, by_hour, by_min, on_day, note, sort, from_day, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            nid, u.id, t.title, t.kind, t.days, t.per_week, t.by_hour, t.by_min, t.on_day, t.note, task.sort, today, Date.now());
           this.sql.exec('UPDATE checks SET task_id = ? WHERE task_id = ? AND day = ?', nid, task.id, today);
+          this.sql.exec('UPDATE images SET task_id = ? WHERE task_id = ?', nid, task.id);
         }
         return json(this.state(u));
       }
@@ -497,6 +536,7 @@ function cleanTask(b) {
   const title = norm(b.title, 50);
   if (!title) bad('כתוב מה המשימה');
   const kind = b.kind === 'dont' ? 'dont' : 'do';
+  const note = cleanNote(b.note);
   // משימה חד פעמית: תאריך אחד, מהיום ועד שנה קדימה
   if (b.on_day != null && b.on_day !== '') {
     const on_day = String(b.on_day), today = local().day;
@@ -505,7 +545,7 @@ function cleanTask(b) {
     if (on_day > addDays(today, 366)) bad('אפשר עד שנה קדימה');
     let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
     if (by_min === -1) bad('השעה לא תקינה');
-    return { title, kind, days: String(dowOf(on_day)), per_week: null, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day };
+    return { title, kind, days: String(dowOf(on_day)), per_week: null, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day, note };
   }
   const hasN = b.per_week != null && b.per_week !== '';
   const per_week = hasN ? intIn(b.per_week, 1, kind === 'do' ? 6 : 7, null) : null;
@@ -515,6 +555,18 @@ function cleanTask(b) {
   let by_min = b.by_min === null || b.by_min === '' || b.by_min === undefined ? null : intIn(b.by_min, 0, 1439, -1);
   if (by_min === -1) bad('השעה לא תקינה');
   if (kind === 'dont' && per_week) by_min = null;
-  return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day: null };
+  return { title, kind, days, per_week, by_min, by_hour: by_min == null ? null : Math.floor(by_min / 60), on_day: null, note };
 }
-const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null, on_day: t.on_day ?? null });
+// פירוט חופשי: שומר ירידות שורה, עד 2000 תווים
+function cleanNote(v) {
+  const s = String(v ?? '').replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 2000);
+  return s || null;
+}
+// מזהה תמונה לפי הבתים הראשונים, לא לפי מה שהדפדפן אומר
+function imgType(d) {
+  if (d[0] === 0xff && d[1] === 0xd8 && d[2] === 0xff) return 'image/jpeg';
+  if (d[0] === 0x89 && d[1] === 0x50 && d[2] === 0x4e && d[3] === 0x47) return 'image/png';
+  if (String.fromCharCode(...d.slice(0, 4)) === 'RIFF' && String.fromCharCode(...d.slice(8, 12)) === 'WEBP') return 'image/webp';
+  return null;
+}
+const pubTask = (t) => ({ id: t.id, title: t.title, kind: t.kind, days: t.days, per_week: t.per_week ?? null, by_min: t.by_min ?? null, on_day: t.on_day ?? null, note: t.note ?? null });
