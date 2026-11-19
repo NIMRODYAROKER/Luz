@@ -303,9 +303,9 @@ export class LuzDB extends DurableObject {
     for (const s of subs) { try { out.push(await this.sendPush(s, msg)); } catch (e) { console.error('push', e); out.push(0); } }
     return out;
   }
-  // התראות: לכל משימה פתוחה התראה נפרדת משלה, כל שעה עגולה מ-9:00 עד 23:00, עד שמסמנים אותה. שקט בין 23:30 ל-9:00.
+  // התראות: לכל משימה פתוחה התראה נפרדת משלה, כל שעה עגולה מ-10:00 עד 01:00, עד שמסמנים אותה. שקט בין 2:00 ל-10:00.
   notePoint(t, min) {
-    if (min < 540 || min >= 1410) return null;
+    if (min >= 120 && min < 600) return null;
     return Math.floor(min / 60) * 60;
   }
   async cron() {
