@@ -199,6 +199,14 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .imgs .add{position:relative;aspect-ratio:1;border-radius:10px;border:1.5px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:13px;font-weight:700}
 .imgs .add input{position:absolute;inset:0;opacity:0;width:100%;height:100%}
 .imgs .im.up{opacity:.5}
+.notebox{background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding-bottom:10px}
+.notebox:focus-within{border-color:var(--neon);box-shadow:var(--glow)}
+.tform .notebox textarea.inp{border:0;background:transparent;box-shadow:none;min-height:110px}
+.nimgs{padding:0 12px}
+.nimgs .imgs{grid-template-columns:repeat(4,1fr);margin:0 0 8px}
+.nadd{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font-size:13px;font-weight:700}
+.nadd .i{width:16px;height:16px}
+.nadd input{position:absolute;inset:0;opacity:0;width:100%;height:100%}
 .task .more{flex:none;width:38px;height:38px;margin:-6px -6px -6px 0;border-radius:10px;display:grid;place-items:center;color:var(--khaki);background:var(--card2);border:1px solid var(--line2)}
 .task .more .i{width:19px;height:19px}
 .note{white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:16px;margin-bottom:12px}
@@ -597,6 +605,10 @@ const dateLabel = (d) => { const x = new Date(d + 'T12:00:00Z'); return d === to
 const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_day, ...(t.by_min != null ? { m: t.by_min } : {}) });
 // מפעיל באייפון את הקיצור "Luz" שיוצר שעון מעורר בשעה של המשימה
 const alarmUrl = (min) => 'shortcuts://run-shortcut?name=Luz&input=text&text=' + encodeURIComponent(hm(min));
+// זוכר באייפון הזה אם המשימה כבר נוספה ליומן / לשעון (כדי לא להציע שוב)
+const getAdded = (id) => { try { return JSON.parse(localStorage.getItem('luz_added_' + id)) || {}; } catch { return {}; } };
+const setAdded = (id, k, v) => { try { const a = getAdded(id); a[k] = v; localStorage.setItem('luz_added_' + id, JSON.stringify(a)); } catch {} };
+const calSig = (d, m) => d + '|' + (m ?? '');
 const freqLabel = (t) => t.on_day ? 'חד פעמי · ' + dateLabel(t.on_day) : t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
@@ -637,23 +649,20 @@ function editTask(t) {
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
+    <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
     <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
     <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
     <div class="field" id="fDateWrap"><span>באיזה תאריך</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
       <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value="${f.date}"></label></div></div>
-    ${t ? '' : `<div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>`}
+    <div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
     <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="stepper"><button id="fNPlus" aria-label="עוד">+</button><div><b id="fNNum"></b><small>בשבוע</small></div><button id="fNMinus" aria-label="פחות">−</button></div></div>
     <div class="field" id="fByWrap"><div class="swrow" id="fBySw"><span id="fByLbl"></span><i class="sw"></i></div>
       <input class="inp" type="time" id="fBy" value="${t?.by_min != null ? hm(t.by_min) : '20:00'}">
-      ${t ? '' : `<button class="ckrow" id="fAlarm" style="margin-top:8px"><span class="ck">${icon('check')}</span>להוסיף גם שעון מעורר באייפון</button>`}</div>
-    <label class="field"><span>פירוט (לא חובה)</span><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea></label>
-    <div class="field"><span>תמונות (לא חובה)</span><div class="imgs" id="fImgs"></div></div>
+      <button class="ckrow" id="fAlarm" style="margin-top:8px"><span class="ck">${icon('check')}</span>להוסיף גם שעון מעורר באייפון</button></div>
     <div class="err" id="fErr"></div>
     <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
-    ${t?.on_day ? `<a class="btn ghost" style="margin-top:8px" href="${calUrl(t)}">${icon('today')}הוסף ליומן באייפון</a>` : ''}
-    ${t?.by_min != null ? `<a class="btn ghost" style="margin-top:8px" href="${alarmUrl(t.by_min)}">${icon('clock')}הוסף שעון מעורר באייפון</a>` : ''}
     ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}</div>`);
   const draw = () => {
     document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
@@ -673,8 +682,9 @@ function editTask(t) {
     const dd = f.date === todayStr() ? '0' : f.date === plusDay(1) ? '1' : null;
     document.querySelectorAll('#fDateWrap button').forEach(b => b.classList.toggle('on', b.dataset.dd === dd));
     $('#fDatePick').classList.toggle('on', !dd); $('#fDateLbl').textContent = dd ? 'תאריך אחר' : dateLabel(f.date);
-    if ($('#fAlarm')) { $('#fAlarm').classList.toggle('hidden', !f.hasBy); $('#fAlarm').classList.toggle('on', !!f.alarm); }
-    if ($('#fCalWrap')) { $('#fCalWrap').classList.toggle('hidden', !once); $('#fCal').classList.toggle('on', !!f.cal); }
+    const tm = f.hasBy ? parseTime($('#fBy').value) : null, ad = t ? getAdded(t.id) : {};
+    $('#fAlarm').classList.toggle('hidden', !f.hasBy || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
+    $('#fCalWrap').classList.toggle('hidden', !once || ad.cal === calSig(f.date, tm)); $('#fCal').classList.toggle('on', !!f.cal);
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
@@ -685,8 +695,9 @@ function editTask(t) {
   document.querySelectorAll('#fDateWrap button').forEach(b => b.onclick = () => { f.date = plusDay(+b.dataset.dd); $('#fDate').value = f.date; draw(); });
   $('#fDate').onchange = () => { if ($('#fDate').value) f.date = $('#fDate').value; draw(); };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
-  if ($('#fAlarm')) $('#fAlarm').onclick = () => { f.alarm = !f.alarm; draw(); };
-  if ($('#fCal')) $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
+  $('#fAlarm').onclick = () => { f.alarm = !f.alarm; draw(); };
+  $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
+  $('#fBy').oninput = draw;
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
     const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
   });
@@ -695,9 +706,9 @@ function editTask(t) {
   const imgs = [...(t?.imgs || [])], wait = [];
   const drawImgs = () => {
     const el = $('#fImgs'); if (!el) return;
-    el.innerHTML = imgs.map(id => `<div class="im"><img data-img="${id}" alt=""><button class="rm" data-rm="${id}" aria-label="הסר">${icon('x')}</button></div>`).join('') +
-      wait.map((w, i) => `<div class="im ${w.up ? 'up' : ''}"><img src="${w.url}" alt=""><button class="rm" data-rw="${i}" aria-label="הסר">${icon('x')}</button></div>`).join('') +
-      (imgs.length + wait.length < 6 ? `<label class="add">${icon('image')}הוספה<input type="file" accept="image/*" multiple id="fImgIn"></label>` : '');
+    el.innerHTML = (imgs.length + wait.length ? '<div class="imgs">' + imgs.map(id => `<div class="im"><img data-img="${id}" alt=""><button class="rm" data-rm="${id}" aria-label="הסר">${icon('x')}</button></div>`).join('') +
+      wait.map((w, i) => `<div class="im ${w.up ? 'up' : ''}"><img src="${w.url}" alt=""><button class="rm" data-rw="${i}" aria-label="הסר">${icon('x')}</button></div>`).join('') + '</div>' : '') +
+      (imgs.length + wait.length < 6 ? `<label class="nadd">${icon('image')}הוספת תמונה<input type="file" accept="image/*" multiple id="fImgIn"></label>` : '');
     fillImgs(el);
     el.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
       try { S = await api('/img/' + b.dataset.rm, { method: 'DELETE' }); imgs.splice(imgs.indexOf(b.dataset.rm), 1); drawImgs(); render(); } catch (e) { toast(e.message); }
@@ -735,18 +746,21 @@ function editTask(t) {
         for (const w of wait) { try { S = await uploadImg(nid, w.file); } catch (e) { toast(e.message); } }
       }
       $('#fSave').disabled = false; closeSheet(); render();
-      // שעון מעורר: פותח את הקיצור "Luz" באייפון (אם בחר גם יומן – היומן קודם)
-      if (!t && f.alarm && by != null && !(once && f.cal)) { toast('נוספה משימה'); return setTimeout(() => { location.href = alarmUrl(by); }, 300); }
-      // רק אם בחר "כן" – פותח את לוח השנה של האייפון
-      if (once && !t && f.cal) { const nt = [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' ')); if (nt) { toast('נוספה משימה'); return setTimeout(() => { location.href = calUrl(nt); }, 300); } }
-      toast(t ? 'נשמר' : 'נוספה משימה');
+      const msg = t ? 'נשמר' : 'נוספה משימה', id = t ? t.id : nid, ad = t ? getAdded(t.id) : {};
+      const nt = S.tasks.find(x => x.id === id) || [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' '));
+      const wantCal = once && f.cal && nt && ad.cal !== calSig(on_day, by), wantAlarm = f.alarm && by != null && ad.alarm !== by;
+      // רק אם בחר "כן" – פותח את לוח השנה של האייפון (אם בחר גם שעון – היומן קודם)
+      if (wantCal) { setAdded(nt.id, 'cal', calSig(on_day, by)); toast(msg); return setTimeout(() => { location.href = calUrl(nt); }, 300); }
+      // שעון מעורר: פותח את הקיצור "Luz" באייפון
+      if (wantAlarm) { if (nt) setAdded(nt.id, 'alarm', by); toast(msg); return setTimeout(() => { location.href = alarmUrl(by); }, 300); }
+      toast(msg);
     }
     catch (e) { $('#fErr').textContent = e.message; $('#fSave').disabled = false; }
   };
   if (t) $('#fDel').onclick = async () => {
     if (!confirmDel.armed) { confirmDel.armed = true; $('#fDel').textContent = 'לחץ שוב למחיקה'; setTimeout(() => confirmDel.armed = false, 3000); return; }
     confirmDel.armed = false;
-    try { S = await api('/tasks/' + t.id, { method: 'DELETE' }); closeSheet(); render(); toast('נמחקה'); } catch (e) { toast(e.message); }
+    try { S = await api('/tasks/' + t.id, { method: 'DELETE' }); try { localStorage.removeItem('luz_added_' + t.id); } catch {} closeSheet(); render(); toast('נמחקה'); } catch (e) { toast(e.message); }
   };
 }
 const confirmDel = {};
