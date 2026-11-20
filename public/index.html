@@ -257,6 +257,45 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .fpanel .frow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .fpanel .frow button{padding:7px 12px;border-radius:99px;background:none;border:0;font-weight:700;font-size:13px;color:var(--muted)}
 .fpanel .frow button.on{background:var(--olive-soft);color:var(--olive2)}
+/* משיכה ימינה למחיקה בדף המשימות */
+.swp{position:relative;overflow:hidden;border-radius:16px;margin-bottom:8px}
+.swp>.mtask{margin-bottom:0}
+.swp>.mtask,.swp>.drow{position:relative;z-index:1;touch-action:pan-y;transition:transform .25s var(--ease)}
+.swdel{position:absolute;left:0;top:0;bottom:0;width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:var(--red);color:#fff;font-weight:800;font-size:13px}
+.swdel .i{width:20px;height:20px}
+.dayblk .swp{margin:0;border-radius:0;border-bottom:1px solid var(--line)}
+.dayblk .swp:last-child{border-bottom:0}
+.dayblk .swp>.drow{border-bottom:0;background-color:var(--card)}
+.dayblk .swp>.drow.once{margin-inline:0;width:100%}
+/* טופס משימה בלי מסגרות */
+.tform{--soft:rgba(214,201,154,.06)}
+.sheet:has(.tform){border:0}
+.tform .field{margin-bottom:22px}
+.tform .inp{border:0;background:var(--soft);border-radius:14px}
+.tform .inp:focus{box-shadow:none;background:rgba(200,220,90,.09)}
+.tform #fTitle{background:none;border-radius:0;padding:4px 2px 10px;font-family:var(--head);font-size:24px;border-bottom:1.5px solid var(--line2);transition:border-color .2s}
+.tform #fTitle:focus{background:none;border-bottom-color:var(--neon)}
+.tform .notebox{border:0;background:var(--soft);border-radius:14px}
+.tform .notebox:focus-within{box-shadow:none;background:rgba(200,220,90,.08)}
+.tform .nadd{border:0;background:rgba(214,201,154,.08)}
+.tform .imgs .im{border:0}
+.tform .kcards button{border:0;background:var(--soft);border-radius:16px}
+.tform .kcards button.on{background:rgba(200,220,90,.15);box-shadow:none}
+.tform .kcards button.on.dont{background:rgba(255,106,61,.15);box-shadow:none}
+.tform .tabs{border:0;gap:6px}
+.tform .tabs button{margin:0;padding:11px 4px;border:0;border-radius:99px;background:var(--soft);font-size:13px}
+.tform .tabs button.on{background:var(--neon);color:#11140d;text-shadow:none}
+.tform .dchips>*{border:0;background:var(--soft);border-radius:99px}
+.tform .dchips .on{background:var(--neon);box-shadow:none}
+.tform #fDays button{border:0;background:var(--soft)}
+.tform #fDays button.on{background:var(--neon);box-shadow:none}
+.tform .quick button{border:0;background:rgba(200,220,90,.1);border-radius:99px}
+.tform .stepper{border:0;background:var(--soft);border-radius:16px}
+.tform .stepper button{border-radius:12px}
+.tform .inp[type=time]{margin-top:0}
+.tform .ckrow .ck{border:0;background:rgba(214,201,154,.12)}
+.tform .ckrow.on .ck{box-shadow:none}
+.tform .btn#fSave{box-shadow:none;border-radius:16px}
 
 /* ניווט תחתון */
 .nav{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
@@ -318,6 +357,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
 </svg>
 
 <!-- כניסה -->
@@ -622,7 +662,10 @@ const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_da
 // מפעיל באייפון את הקיצור "Luz" שיוצר שעון מעורר בשעה של המשימה
 // שורה ראשונה: השעה. שורה שנייה: התווית (הפירוט, ואם אין – שם המשימה)
 const alarmLabel = (title, note) => (String(note || '').trim() || String(title || '').trim()).replace(/\s+/g, ' ').slice(0, 120);
-const alarmUrl = (min, title, note) => 'shortcuts://run-shortcut?name=Luz&input=text&text=' + encodeURIComponent(hm(min) + '\n' + alarmLabel(title, note));
+// בסיום הקיצור האייפון חוזר ל-Luz (באפליקציה ממסך הבית – webapp://, בספארי – לאותו דף)
+const backUrl = () => (matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? 'webapp://' + location.host + '/' : location.href;
+const alarmUrl = (min, title, note) => 'shortcuts://x-callback-url/run-shortcut?name=Luz&input=text&text=' + encodeURIComponent(hm(min) + '\n' + alarmLabel(title, note)) +
+  '&x-success=' + encodeURIComponent(backUrl()) + '&x-cancel=' + encodeURIComponent(backUrl()) + '&x-error=' + encodeURIComponent(backUrl());
 // זוכר באייפון הזה אם המשימה כבר נוספה ליומן / לשעון (כדי לא להציע שוב)
 const getAdded = (id) => { try { return JSON.parse(localStorage.getItem('luz_added_' + id)) || {}; } catch { return {}; } };
 const setAdded = (id, k, v) => { try { const a = getAdded(id); a[k] = v; localStorage.setItem('luz_added_' + id, JSON.stringify(a)); } catch {} };
@@ -641,9 +684,46 @@ function renderTasks() {
   const list = S.tasks.filter(t => (!flt.kind || t.kind === flt.kind) && (!flt.type || (flt.type === 'once') === !!t.on_day) &&
     (flt.day == null || (t.on_day ? new Date(t.on_day + 'T12:00:00Z').getUTCDay() === flt.day : t.days.includes(String(flt.day)))));
   if (!list.length) { el.innerHTML = '<div class="dfree">אין משימות שמתאימות לסינון</div>'; return; }
-  el.innerHTML = list.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
-    <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('');
-  el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
+  el.innerHTML = list.map(t => swWrap(t.id, `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
+    <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`)).join('');
+  bindSwipe(el, '.mtask');
+}
+// משיכה ימינה חושפת כפתור מחיקה
+const SW_OPEN = 96;
+const swWrap = (id, html) => `<div class="swp"><button class="swdel" data-del="${id}">${icon('trash')}מחיקה</button>${html}</div>`;
+function closeSwipes(except) {
+  let any = false;
+  document.querySelectorAll('.swp.open').forEach(w => { if (w === except) return; any = true; w.classList.remove('open'); w.lastElementChild.style.transform = ''; });
+  return any;
+}
+function bindSwipe(el, sel) {
+  el.querySelectorAll('.swp').forEach(w => {
+    const row = w.lastElementChild; let x0, y0, dx = 0, base = 0, mode = null;
+    row.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; mode = null; w.moved = false; base = w.classList.contains('open') ? SW_OPEN : 0; }, { passive: true });
+    row.addEventListener('touchmove', (e) => {
+      const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (!mode) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; mode = Math.abs(mx) > Math.abs(my) ? 'h' : 'v'; if (mode === 'h') { w.moved = true; closeSwipes(w); row.style.transition = 'none'; } }
+      if (mode !== 'h') return;
+      e.preventDefault();
+      dx = Math.max(0, Math.min(SW_OPEN + 30, base + mx)); row.style.transform = `translateX(${dx}px)`;
+    }, { passive: false });
+    row.addEventListener('touchend', () => {
+      if (mode !== 'h') return;
+      row.style.transition = '';
+      const open = dx > SW_OPEN / 2; w.classList.toggle('open', open);
+      row.style.transform = open ? `translateX(${SW_OPEN}px)` : '';
+      if (open && navigator.vibrate) navigator.vibrate(10);
+    });
+    row.onclick = () => {
+      if (w.moved) { w.moved = false; return; }
+      if (closeSwipes()) return;
+      editTask(S.tasks.find(t => t.id === row.dataset.id));
+    };
+  });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.del;
+    try { S = await api('/tasks/' + id, { method: 'DELETE' }); try { localStorage.removeItem('luz_added_' + id); } catch {} render(); toast('נמחקה'); } catch (e) { toast(e.message); }
+  });
 }
 document.querySelectorAll('#tMode button').forEach(b => b.onclick = () => { tMode = b.dataset.tm; renderTasks(); });
 // סינון: סוג (לעשות / לא לעשות), תדירות (קבוע / חד פעמי), יום בשבוע
@@ -669,12 +749,12 @@ function renderByDay(el) {
   const weekly = S.tasks.filter(t => t.per_week && !t.on_day);
   const row = (t, d) => {
     const ok = d === today && t.kind === 'do' && S.today.checks[t.id] === 'done';
-    return `<button class="drow ${ok ? 'ok' : ''} ${t.on_day ? 'once' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
-      <span class="t">${esc(t.title)}<small>${t.on_day ? 'חד פעמי' : 'קבוע'}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`;
+    return swWrap(t.id, `<button class="drow ${ok ? 'ok' : ''} ${t.on_day ? 'once' : ''}" data-id="${t.id}"><span class="tm ${t.by_min == null ? 'no' : ''}">${t.by_min != null ? hm(t.by_min) : 'כל היום'}</span>
+      <span class="t">${esc(t.title)}<small>${t.on_day ? 'חד פעמי' : 'קבוע'}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`);
   };
   let html = '';
   if (weekly.length) html += `<div class="dayblk"><div class="dayhd"><b>במהלך השבוע</b><span>אתה בוחר באילו ימים</span></div>` +
-    weekly.map(t => `<button class="drow" data-id="${t.id}"><span class="tm no">${t.kind === 'dont' ? 'עד ' + t.per_week : t.per_week === 1 ? 'פעם' : t.per_week + ' פעמים'}</span><span class="t">${esc(t.title)}<small>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('') + '</div>';
+    weekly.map(t => swWrap(t.id, `<button class="drow" data-id="${t.id}"><span class="tm no">${t.kind === 'dont' ? 'עד ' + t.per_week : t.per_week === 1 ? 'פעם' : t.per_week + ' פעמים'}</span><span class="t">${esc(t.title)}<small>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</small></span><span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`)).join('') + '</div>';
   for (let i = 0; i < 7; i++) {
     const x = new Date(today + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + i);
     const d = x.toISOString().slice(0, 10), dow = x.getUTCDay();
@@ -684,10 +764,10 @@ function renderByDay(el) {
       (list.length ? list.map(t => row(t, d)).join('') : '<div class="dfree">יום פנוי</div>') + '</div>';
   }
   el.innerHTML = html;
-  el.querySelectorAll('.drow').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
+  bindSwipe(el, '.drow');
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: t?.by_min != null, date: t?.on_day || todayStr() };
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, date: t?.on_day || todayStr() };
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
@@ -700,7 +780,7 @@ function editTask(t) {
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
     <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="stepper"><button id="fNPlus" aria-label="עוד">+</button><div><b id="fNNum"></b><small>בשבוע</small></div><button id="fNMinus" aria-label="פחות">−</button></div></div>
-    <div class="field" id="fByWrap"><div class="swrow" id="fBySw"><span id="fByLbl"></span><i class="sw"></i></div>
+    <div class="field" id="fByWrap"><span id="fByLbl"></span>
       <input class="inp" type="time" id="fBy" value="${t?.by_min != null ? hm(t.by_min) : '20:00'}">
       <button class="ckrow" id="fAlarm" style="margin-top:8px"><span class="ck">${icon('check')}</span>להוסיף גם שעון מעורר באייפון</button></div>
     <div class="err" id="fErr"></div>
@@ -712,9 +792,7 @@ function editTask(t) {
     if (!dont && f.n > 6) f.n = 6;
     $('#fWeekBtn').textContent = dont ? 'מוגבל בשבוע' : 'כמה בשבוע';
     $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע (אתה בוחר באילו ימים)';
-    $('#fByLbl').textContent = dont ? (f.hasBy ? 'רק עד שעה מסוימת (אחריה זה הצלחה)' : 'כל היום – אפשר להגביל עד שעה') : (f.hasBy ? 'עד שעה (אחריה ההתראות מתגברות והאפליקציות ננעלות)' : 'בלי שעה – אפשר לקבוע עד איזו שעה');
-    $('#fBySw .sw').classList.toggle('on', f.hasBy);
-    $('#fBy').classList.toggle('hidden', !f.hasBy);
+    $('#fByLbl').textContent = dont ? 'עד איזו שעה (אחריה זה הצלחה)' : 'עד איזו שעה';
     const maxN = dont ? 7 : 6;
     $('#fNNum').textContent = f.n; $('#fNPlus').disabled = f.n >= maxN; $('#fNMinus').disabled = f.n <= 1;
     document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.m === (once ? 'once' : wk ? 'week' : 'days')));
@@ -733,7 +811,6 @@ function editTask(t) {
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
-  $('#fBySw').onclick = () => { f.hasBy = !f.hasBy; draw(); };
   document.querySelectorAll('#fDateWrap button').forEach(b => b.onclick = () => { f.date = plusDay(+b.dataset.dd); $('#fDate').value = f.date; draw(); });
   $('#fDate').onchange = () => { if ($('#fDate').value) f.date = $('#fDate').value; draw(); };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
@@ -773,7 +850,8 @@ function editTask(t) {
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
     const once = f.once, wk = f.week && !once;
-    const by = (f.kind === 'dont' && wk) || !f.hasBy ? null : parseTime($('#fBy').value);
+    const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
+    if (by === null && !(f.kind === 'dont' && wk)) return $('#fErr').textContent = 'בחר שעה';
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
     const on_day = once ? f.date : null;
     if (once && !on_day) return $('#fErr').textContent = 'בחר תאריך';
@@ -856,9 +934,9 @@ $('#gateBtn').onclick = () => {
       <li>לחץ <b>אוטומציה ריקה חדשה</b> (New Blank Automation).</li>
       <li>בשורת החיפוש למטה כתוב <b dir="ltr">URL</b>. מהתוצאות בחר את הפעולה שהשם שלה מתחיל ב-<b>קבלת תוכן</b> (Get Contents of URL). לחץ על המילה הכחולה <b dir="ltr">URL</b> בתוך הפעולה והדבק את הקישור שהעתקת.</li>
       <li>בשורת החיפוש כתוב <b>אם</b> (If) ובחר את הפעולה <b>אם</b>. תוודא שהשורה בודקת את <b>התוכן</b> שחזר מהקישור, ולא משהו כמו "גודל קובץ". אם כתוב שם משהו אחר, לחץ על הכפתור הכחול שאחרי "אם" ובחר <b>טקסט</b> (Text).</li>
-      <li>לחץ על המילה הכחולה <b>תנאי</b> (Condition) ובחר <b>מכיל</b> (contains). במקום הטקסט שמופיע אחריו כתוב <b dir="ltr">locked</b> – באותיות קטנות בלבד. בסוף השור      <li>שוב בשורת החיפוש כתוב <b>מסך הבית</b> ובחר את הפעולה <b>מעבר למסך הבית</b> (Go to Home Screen). היא תיכנס בתחתית. החזק עליה וגרור אותה למעלה, כך שתהיה בין השורה "אם" לשורה "אחרת" (Otherwise).</li>
+      <li>לחץ על המילה הכחולה <b>תנאי</b> (Condition) ובחר <b>מכיל</b> (contains). במקום הטקסט שמופיע אחריו כתוב <b dir="ltr">locked</b> – באותיות קטנות בלבד. בסוף השורה צריכה להיראות כך: אם [התוכן] מכיל <b dir="ltr">locked</b>.</li>
+      <li>שוב בשורת החיפוש כתוב <b>מסך הבית</b> ובחר את הפעולה <b>מעבר למסך הבית</b> (Go to Home Screen). היא תיכנס בתחתית. החזק עליה וגרור אותה למעלה, כך שתהיה בין השורה "אם" לשורה "אחרת" (Otherwise).</li>
       <li>אם כבר הגדרת את זה בעבר ויש שם גם את הפעולה <b>פתיחת כתובות אינטרנט</b> (Open URLs), החלק אותה שמאלה ולחץ <b>מחיקה</b>.</li>
-אותו, וכתוב במקומו: <b dir="ltr">${esc(location.origin)}</b></li>
       <li>לחץ <b>סיום</b> (Done) למעלה.</li>
       <li>בדיקה: צור ב-Luz משימה "בדיקה" מסוג <b>לעשות</b> להיום, עם שעה שכבר עברה, ופתח אינסטגרם. אמור לחזור למסך הבית ולקפוץ לך התראה מ-Luz. לחיצה עליה פותחת את Luz. אחרי שזה עובד, מחק את משימת הבדיקה.</li>
     </ol>
