@@ -248,6 +248,14 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .drow.once .t small{color:var(--warn);font-weight:700}
 .drow.ok .t{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(214,201,154,.35)}
 .dfree{color:var(--muted);font-size:14px;padding:12px 2px}
+/* סינון בכל המשימות */
+.fbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:4px 2px;margin-bottom:10px;font-weight:700;font-size:14px;color:var(--muted)}
+.fbtn .i{width:18px;height:18px}
+.fbtn.act{color:var(--olive2)}
+.fpanel{margin-bottom:14px}
+.fpanel .frow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.fpanel .frow button{padding:7px 12px;border-radius:99px;background:none;border:0;font-weight:700;font-size:13px;color:var(--muted)}
+.fpanel .frow button.on{background:var(--olive-soft);color:var(--olive2)}
 
 /* ניווט תחתון */
 .nav{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
@@ -308,6 +316,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5"/></symbol>
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
 </svg>
 
 <!-- כניסה -->
@@ -349,6 +358,8 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <section id="v-tasks" class="view hidden">
     <h2>המשימות שלי</h2>
     <div class="seg tmode" id="tMode"><button data-tm="days">לפי ימים</button><button data-tm="all">כל המשימות</button></div>
+    <button class="fbtn hidden" id="fltBtn"></button>
+    <div class="fpanel hidden" id="fltPanel"></div>
     <div id="allList"></div>
   </section>
 
@@ -621,12 +632,33 @@ function renderTasks() {
   $('#tMode').classList.toggle('hidden', !S.tasks.length);
   document.querySelectorAll('#tMode button').forEach(b => b.classList.toggle('on', b.dataset.tm === tMode));
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
+  $('#fltBtn').classList.toggle('hidden', tMode !== 'all');
+  if (tMode !== 'all') $('#fltPanel').classList.add('hidden');
   if (tMode === 'days') return renderByDay(el);
-  el.innerHTML = S.tasks.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
+  drawFilter();
+  const list = S.tasks.filter(t => (!flt.kind || t.kind === flt.kind) && (!flt.type || (flt.type === 'once') === !!t.on_day) &&
+    (flt.day == null || (t.on_day ? new Date(t.on_day + 'T12:00:00Z').getUTCDay() === flt.day : t.days.includes(String(flt.day)))));
+  if (!list.length) { el.innerHTML = '<div class="dfree">אין משימות שמתאימות לסינון</div>'; return; }
+  el.innerHTML = list.map(t => `<button class="mtask" data-id="${t.id}"><span class="t"><b>${esc(t.title)}</b><span>${freqLabel(t)}${t.by_min != null ? ' · עד ' + hm(t.by_min) : ''}</span></span>
     <span class="tag ${t.kind === 'dont' ? 'red' : ''}">${t.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</span></button>`).join('');
   el.querySelectorAll('.mtask').forEach(b => b.onclick = () => editTask(S.tasks.find(t => t.id === b.dataset.id)));
 }
 document.querySelectorAll('#tMode button').forEach(b => b.onclick = () => { tMode = b.dataset.tm; renderTasks(); });
+// סינון: סוג (לעשות / לא לעשות), תדירות (קבוע / חד פעמי), יום בשבוע
+const flt = { kind: null, type: null, day: null };
+function drawFilter() {
+  const n = (flt.kind ? 1 : 0) + (flt.type ? 1 : 0) + (flt.day != null ? 1 : 0);
+  $('#fltBtn').innerHTML = icon('filter') + 'סינון' + (n ? ` (${n})` : '');
+  $('#fltBtn').classList.toggle('act', !!n);
+  const b = (k, v, l) => `<button data-k="${k}" data-v="${v}" class="${String(flt[k]) === String(v) ? 'on' : ''}">${l}</button>`;
+  $('#fltPanel').innerHTML = `<div class="frow">${b('kind', 'null', 'הכל')}${b('kind', 'do', 'לעשות')}${b('kind', 'dont', 'לא לעשות')}</div>
+    <div class="frow">${b('type', 'null', 'הכל')}${b('type', 'fixed', 'קבוע')}${b('type', 'once', 'חד פעמי')}</div>
+    <div class="frow">${b('day', 'null', 'כל הימים')}${DAYS.map((d, i) => b('day', i, d + '׳')).join('')}</div>`;
+  $('#fltPanel').querySelectorAll('button').forEach(x => x.onclick = () => {
+    const v = x.dataset.v; flt[x.dataset.k] = v === 'null' ? null : x.dataset.k === 'day' ? +v : v; renderTasks();
+  });
+}
+$('#fltBtn').onclick = () => $('#fltPanel').classList.toggle('hidden');
 // 7 הימים הקרובים, לכל יום המשימות שלו לפי שעה
 function renderByDay(el) {
   const today = todayStr(), byTime = (a, b) => (a.by_min ?? 9999) - (b.by_min ?? 9999);
