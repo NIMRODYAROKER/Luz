@@ -269,7 +269,7 @@ export class LuzDB extends DurableObject {
   state(u) {
     this.closeOnce(u.id);
     const l = local(), r = this.dayResult(u.id, l.day);
-    const all = this.q('SELECT * FROM tasks WHERE user_id = ? AND to_day IS NULL ORDER BY sort, created', u.id);
+    const all = this.q('SELECT * FROM tasks WHERE user_id = ? AND to_day IS NULL ORDER BY sort DESC, created DESC', u.id);
     const im = this.imgMap(u.id), pub = (t) => ({ ...pubTask(t), imgs: im[t.id] || [] });
     // שבוע אחרון לתצוגה
     const week = [];
