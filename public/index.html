@@ -252,6 +252,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .fbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:4px 2px;margin-bottom:10px;font-weight:700;font-size:14px;color:var(--muted)}
 .fbtn .i{width:18px;height:18px}
 .fbtn.act{color:var(--olive2)}
+.fbar{display:flex;align-items:center;justify-content:space-between}
 .fpanel{margin-bottom:14px}
 .fpanel .frow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .fpanel .frow button{padding:7px 12px;border-radius:99px;background:none;border:0;font-weight:700;font-size:13px;color:var(--muted)}
@@ -358,7 +359,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <section id="v-tasks" class="view hidden">
     <h2>המשימות שלי</h2>
     <div class="seg tmode" id="tMode"><button data-tm="days">לפי ימים</button><button data-tm="all">כל המשימות</button></div>
-    <button class="fbtn hidden" id="fltBtn"></button>
+    <div class="fbar"><button class="fbtn hidden" id="fltBtn"></button><button class="fbtn hidden" id="fltReset">איפוס</button></div>
     <div class="fpanel hidden" id="fltPanel"></div>
     <div id="allList"></div>
   </section>
@@ -633,6 +634,7 @@ function renderTasks() {
   document.querySelectorAll('#tMode button').forEach(b => b.classList.toggle('on', b.dataset.tm === tMode));
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
   $('#fltBtn').classList.toggle('hidden', tMode !== 'all');
+  if (tMode !== 'all') $('#fltReset').classList.add('hidden');
   if (tMode !== 'all') $('#fltPanel').classList.add('hidden');
   if (tMode === 'days') return renderByDay(el);
   drawFilter();
@@ -650,6 +652,7 @@ function drawFilter() {
   const n = (flt.kind ? 1 : 0) + (flt.type ? 1 : 0) + (flt.day != null ? 1 : 0);
   $('#fltBtn').innerHTML = icon('filter') + 'סינון' + (n ? ` (${n})` : '');
   $('#fltBtn').classList.toggle('act', !!n);
+  $('#fltReset').classList.toggle('hidden', !n);
   const b = (k, v, l) => `<button data-k="${k}" data-v="${v}" class="${String(flt[k]) === String(v) ? 'on' : ''}">${l}</button>`;
   $('#fltPanel').innerHTML = `<div class="frow">${b('kind', 'null', 'הכל')}${b('kind', 'do', 'לעשות')}${b('kind', 'dont', 'לא לעשות')}</div>
     <div class="frow">${b('type', 'null', 'הכל')}${b('type', 'fixed', 'קבוע')}${b('type', 'once', 'חד פעמי')}</div>
@@ -659,6 +662,7 @@ function drawFilter() {
   });
 }
 $('#fltBtn').onclick = () => $('#fltPanel').classList.toggle('hidden');
+$('#fltReset').onclick = () => { flt.kind = flt.type = flt.day = null; renderTasks(); };
 // 7 הימים הקרובים, לכל יום המשימות שלו לפי שעה
 function renderByDay(el) {
   const today = todayStr(), byTime = (a, b) => (a.by_min ?? 9999) - (b.by_min ?? 9999);
