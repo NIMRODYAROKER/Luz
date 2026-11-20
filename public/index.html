@@ -506,6 +506,10 @@ async function logout(silent) {
 // ---------- טעינה ----------
 async function load() {
   S = await api('/state');
+  // פעם אחת: משימות שנוצרו לפני שהאפליקציה זכרה הוספה ליומן/לשעון – נחשבות כבר נוספו
+  try { if (!localStorage.getItem('luz_added_init')) { S.tasks.forEach(t => { const a = getAdded(t.id);
+    if (t.on_day && !a.cal) setAdded(t.id, 'cal', calSig(t.on_day, t.by_min));
+    if (t.by_min != null && a.alarm == null) setAdded(t.id, 'alarm', t.by_min); }); localStorage.setItem('luz_added_init', '1'); } } catch {}
   $('#auth').classList.add('hidden');
   ['#app', '#nav'].forEach(s => $(s).classList.remove('hidden'));
   render();
