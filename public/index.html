@@ -608,7 +608,9 @@ const dateLabel = (d) => { const x = new Date(d + 'T12:00:00Z'); return d === to
 // קובץ אירוע ליומן של האייפון – האייפון שואל אם להוסיף אותו ללוח השנה
 const calUrl = (t) => '/cal.ics?' + new URLSearchParams({ t: t.title, d: t.on_day, ...(t.by_min != null ? { m: t.by_min } : {}) });
 // מפעיל באייפון את הקיצור "Luz" שיוצר שעון מעורר בשעה של המשימה
-const alarmUrl = (min) => 'shortcuts://run-shortcut?name=Luz&input=text&text=' + encodeURIComponent(hm(min));
+// שורה ראשונה: השעה. שורה שנייה: התווית (הפירוט, ואם אין – שם המשימה)
+const alarmLabel = (title, note) => (String(note || '').trim() || String(title || '').trim()).replace(/\s+/g, ' ').slice(0, 120);
+const alarmUrl = (min, title, note) => 'shortcuts://run-shortcut?name=Luz&input=text&text=' + encodeURIComponent(hm(min) + '\n' + alarmLabel(title, note));
 // זוכר באייפון הזה אם המשימה כבר נוספה ליומן / לשעון (כדי לא להציע שוב)
 const getAdded = (id) => { try { return JSON.parse(localStorage.getItem('luz_added_' + id)) || {}; } catch { return {}; } };
 const setAdded = (id, k, v) => { try { const a = getAdded(id); a[k] = v; localStorage.setItem('luz_added_' + id, JSON.stringify(a)); } catch {} };
@@ -756,7 +758,7 @@ function editTask(t) {
       // רק אם בחר "כן" – פותח את לוח השנה של האייפון (אם בחר גם שעון – היומן קודם)
       if (wantCal) { setAdded(nt.id, 'cal', calSig(on_day, by)); toast(msg); return setTimeout(() => { location.href = calUrl(nt); }, 300); }
       // שעון מעורר: פותח את הקיצור "Luz" באייפון
-      if (wantAlarm) { if (nt) setAdded(nt.id, 'alarm', by); toast(msg); return setTimeout(() => { location.href = alarmUrl(by); }, 300); }
+      if (wantAlarm) { if (nt) setAdded(nt.id, 'alarm', by); toast(msg); return setTimeout(() => { location.href = alarmUrl(by, body.title, body.note); }, 300); }
       toast(msg);
     }
     catch (e) { $('#fErr').textContent = e.message; $('#fSave').disabled = false; }
