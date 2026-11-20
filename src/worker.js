@@ -252,8 +252,8 @@ export class LuzDB extends DurableObject {
   }
   locked(u, l = local()) {
     const r = this.dayResult(u.id, l.day);
-    // חסום רק כשעבר המועד של משימה שלא סומנה. משימה בלי שעה לא חוסמת
-    return r.open.some(t => t.by_min != null && l.min >= t.by_min);
+    // חסום רק כשעבר המועד של משימה שלא סומנה. משימה בלי שעה או משימה חד פעמית לא חוסמת
+    return r.open.some(t => !t.on_day && t.by_min != null && l.min >= t.by_min);
   }
   kvGet(k) { return this.one('SELECT v FROM kv WHERE k = ?', k)?.v ?? null; }
   kvSet(k, v) { this.sql.exec('INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v', k, v); }
@@ -322,7 +322,7 @@ export class LuzDB extends DurableObject {
     const key = 'gatepush:' + u.id, now = Date.now();
     if (now - Number(this.kvGet(key) || 0) < 15e3) return;
     this.kvSet(key, String(now));
-    const l = local(), late = this.dayResult(u.id, l.day).open.filter(t => t.by_min != null && l.min >= t.by_min);
+    const l = local(), late = this.dayResult(u.id, l.day).open.filter(t => !t.on_day && t.by_min != null && l.min >= t.by_min);
     const names = late.slice(0, 3).map(t => t.title).join(', ') + (late.length > 3 ? ` ועוד ${late.length - 3}` : '');
     await this.pushUser(u.id, { title: 'Luz נעול', body: `קודם תסיים: ${names}. לחץ כאן.`, tag: 'luz-gate' });
   }
