@@ -807,7 +807,7 @@ function editTask(t) {
     const other = f.dates.filter(d => d !== todayStr() && d !== plusDay(1));
     $('#fDatePick').classList.toggle('on', other.length > 0); $('#fDateLbl').textContent = other.length ? 'עוד תאריך' : 'תאריך אחר';
     $('#fDateSel').innerHTML = f.dates.length > 1 || other.length ? f.dates.map(d => `<button data-rd="${d}">${dateLabel(d)}${icon('x')}</button>`).join('') : '';
-    document.querySelectorAll('#fDateSel button').forEach(b => b.onclick = () => { f.dates = f.dates.filter(d => d !== b.dataset.rd); draw(); });
+    document.querySelectorAll('#fDateSel button').forEach(b => b.onclick = () => { dDef = false; f.dates = f.dates.filter(d => d !== b.dataset.rd); draw(); });
     const tm = f.hasBy ? parseTime($('#fBy').value) : null, ad = t ? getAdded(t.id) : {};
     $('#fAlarm').classList.toggle('hidden', !f.hasBy || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
     $('#fCalWrap').classList.toggle('hidden', !once || f.dates.length !== 1 || ad.cal === calSig(f.dates[0], tm)); $('#fCal').classList.toggle('on', !!f.cal);
@@ -817,7 +817,9 @@ function editTask(t) {
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
-  const togDate = (d) => { f.dates = f.dates.includes(d) ? f.dates.filter(x => x !== d) : [...f.dates, d]; draw(); };
+  // היום מסומן רק כברירת מחדל – הבחירה הראשונה של המשתמש מחליפה אותו ולא מתווספת אליו
+  let dDef = true;
+  const togDate = (d) => { if (dDef) { dDef = false; if (d !== f.dates[0]) f.dates = []; } f.dates = f.dates.includes(d) ? f.dates.filter(x => x !== d) : [...f.dates, d]; draw(); };
   document.querySelectorAll('#fDateWrap button[data-dd]').forEach(b => b.onclick = () => togDate(plusDay(+b.dataset.dd)));
   $('#fDate').onchange = () => { const v = $('#fDate').value; if (v && !f.dates.includes(v)) togDate(v); $('#fDate').value = ''; };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
