@@ -144,6 +144,9 @@ a.btn{text-decoration:none}
 .dchips .on{background:var(--neon);border-color:var(--neon);color:#11140d;box-shadow:0 0 16px rgba(200,220,90,.35)}
 .dpick{position:relative;flex:1.4!important;overflow:hidden}
 .dpick .i{width:18px;height:18px}
+.dsel{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.dsel:empty{display:none}
+.dsel button{display:flex;align-items:center;gap:4px;height:32px;padding:0 10px;border-radius:99px;background:var(--soft);border:1px solid var(--line2);color:var(--text,inherit);font-size:13px;font-weight:700}
+.dsel .i{width:14px;height:14px;opacity:.7}
 .dpick em{font-style:normal;white-space:nowrap}
 .dpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;-webkit-appearance:none;appearance:none}
 .kcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -767,15 +770,15 @@ function renderByDay(el) {
   bindSwipe(el, '.drow');
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, date: t?.on_day || todayStr() };
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, dates: [t?.on_day || todayStr()] };
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
     <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
-    <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">פעם אחת</button></div></div>
-    <div class="field" id="fDateWrap"><span>באיזה תאריך</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
-      <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value="${f.date}"></label></div></div>
+    <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">תאריך מדויק</button></div></div>
+    <div class="field" id="fDateWrap"><span>באילו תאריכים (אפשר לבחור כמה)</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
+      <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value=""></label></div><div class="dsel" id="fDateSel"></div></div>
     <div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>
     <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
       <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
@@ -799,20 +802,24 @@ function editTask(t) {
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
     $('#fDaysWrap').classList.toggle('hidden', wk || once);
     $('#fDateWrap').classList.toggle('hidden', !once);
-    const dd = f.date === todayStr() ? '0' : f.date === plusDay(1) ? '1' : null;
-    document.querySelectorAll('#fDateWrap button').forEach(b => b.classList.toggle('on', b.dataset.dd === dd));
-    $('#fDatePick').classList.toggle('on', !dd); $('#fDateLbl').textContent = dd ? 'תאריך אחר' : dateLabel(f.date);
+    f.dates.sort();
+    document.querySelectorAll('#fDateWrap button[data-dd]').forEach(b => b.classList.toggle('on', f.dates.includes(plusDay(+b.dataset.dd))));
+    const other = f.dates.filter(d => d !== todayStr() && d !== plusDay(1));
+    $('#fDatePick').classList.toggle('on', other.length > 0); $('#fDateLbl').textContent = other.length ? 'עוד תאריך' : 'תאריך אחר';
+    $('#fDateSel').innerHTML = f.dates.length > 1 || other.length ? f.dates.map(d => `<button data-rd="${d}">${dateLabel(d)}${icon('x')}</button>`).join('') : '';
+    document.querySelectorAll('#fDateSel button').forEach(b => b.onclick = () => { f.dates = f.dates.filter(d => d !== b.dataset.rd); draw(); });
     const tm = f.hasBy ? parseTime($('#fBy').value) : null, ad = t ? getAdded(t.id) : {};
     $('#fAlarm').classList.toggle('hidden', !f.hasBy || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
-    $('#fCalWrap').classList.toggle('hidden', !once || ad.cal === calSig(f.date, tm)); $('#fCal').classList.toggle('on', !!f.cal);
+    $('#fCalWrap').classList.toggle('hidden', !once || f.dates.length !== 1 || ad.cal === calSig(f.dates[0], tm)); $('#fCal').classList.toggle('on', !!f.cal);
     $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fByWrap').classList.toggle('hidden', dont && wk);
   };
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
-  document.querySelectorAll('#fDateWrap button').forEach(b => b.onclick = () => { f.date = plusDay(+b.dataset.dd); $('#fDate').value = f.date; draw(); });
-  $('#fDate').onchange = () => { if ($('#fDate').value) f.date = $('#fDate').value; draw(); };
+  const togDate = (d) => { f.dates = f.dates.includes(d) ? f.dates.filter(x => x !== d) : [...f.dates, d]; draw(); };
+  document.querySelectorAll('#fDateWrap button[data-dd]').forEach(b => b.onclick = () => togDate(plusDay(+b.dataset.dd)));
+  $('#fDate').onchange = () => { const v = $('#fDate').value; if (v && !f.dates.includes(v)) togDate(v); $('#fDate').value = ''; };
   document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
   $('#fAlarm').onclick = () => { f.alarm = !f.alarm; draw(); };
   $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
@@ -853,22 +860,27 @@ function editTask(t) {
     const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
     if (by === null && !(f.kind === 'dont' && wk)) return $('#fErr').textContent = 'בחר שעה';
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
-    const on_day = once ? f.date : null;
+    const dates = once ? [...f.dates].sort() : [null], on_day = dates[0];
     if (once && !on_day) return $('#fErr').textContent = 'בחר תאריך';
+    if (dates.length > 30) return $('#fErr').textContent = 'אפשר עד 30 תאריכים בפעם אחת';
     if (wait.some(w => w.up)) return $('#fErr').textContent = 'חכה שהתמונות יסיימו לעלות';
     const body = { title: $('#fTitle').value, kind: f.kind, days: wk ? '0123456' : f.days, per_week: wk ? f.n : null, by_min: by, on_day, note: $('#fNote').value };
     $('#fSave').disabled = true;
     try {
       S = await api(t ? '/tasks/' + t.id : '/tasks', { method: t ? 'PUT' : 'POST', body });
-      const nid = S.created;
-      if (!t && nid && wait.length) {
+      const nid = S.created, extra = [];
+      // כמה תאריכים: כל תאריך נוסף נשמר כמשימה נפרדת עם אותם פרטים
+      for (const d of dates.slice(1)) { S = await api('/tasks', { method: 'POST', body: { ...body, on_day: d } }); if (S.created) extra.push(S.created); }
+      const imgTo = [...(!t && nid ? [nid] : []), ...extra], imgSrc = [...wait.map(w => w.file)];
+      if (t && extra.length && imgs.length) toast('תמונות קיימות נשארות רק במשימה המקורית');
+      if (imgTo.length && imgSrc.length) {
         $('#fSave').textContent = 'מעלה תמונות...';
-        for (const w of wait) { try { S = await uploadImg(nid, w.file); } catch (e) { toast(e.message); } }
+        for (const id of imgTo) for (const file of imgSrc) { try { S = await uploadImg(id, file); } catch (e) { toast(e.message); } }
       }
       $('#fSave').disabled = false; closeSheet(); render();
-      const msg = t ? 'נשמר' : 'נוספה משימה', id = t ? t.id : nid, ad = t ? getAdded(t.id) : {};
+      const msg = dates.length > 1 ? `נוספו ${dates.length} תאריכים` : t ? 'נשמר' : 'נוספה משימה', id = t ? t.id : nid, ad = t ? getAdded(t.id) : {};
       const nt = S.tasks.find(x => x.id === id) || [...S.tasks].reverse().find(x => x.on_day === on_day && x.title === body.title.trim().replace(/\s+/g, ' '));
-      const wantCal = once && f.cal && nt && ad.cal !== calSig(on_day, by), wantAlarm = f.alarm && by != null && ad.alarm !== by;
+      const wantCal = once && dates.length === 1 && f.cal && nt && ad.cal !== calSig(on_day, by), wantAlarm = f.alarm && by != null && ad.alarm !== by;
       // רק אם בחר "כן" – פותח את לוח השנה של האייפון (אם בחר גם שעון – היומן קודם)
       if (wantCal) { setAdded(nt.id, 'cal', calSig(on_day, by)); toast(msg); return setTimeout(() => { location.href = calUrl(nt); }, 300); }
       // שעון מעורר: פותח את הקיצור "Luz" באייפון
