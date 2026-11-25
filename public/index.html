@@ -243,6 +243,24 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .tag.red{background:var(--red-soft);color:#f08a68}
 /* תצוגה לפי ימים */
 .tmode{margin-bottom:14px}
+/* תיקיית משימות קבועות – תמיד למעלה */
+.fxfold{display:flex;align-items:center;gap:12px;width:100%;text-align:right;background:linear-gradient(135deg,rgba(138,155,63,.16),rgba(138,155,63,.04));border:1px solid rgba(138,155,63,.4);border-radius:18px;padding:14px 16px;margin-bottom:14px}
+.fxfold>.i{width:26px;height:26px;color:var(--olive2);flex:none}
+.fxfold .t{flex:1}
+.fxfold .t b{display:block;font-family:var(--head);font-weight:400;font-size:18px}
+.fxfold .t span{font-size:13px;color:var(--muted)}
+.fxfold .ch{width:18px;height:18px;color:var(--muted);flex:none}
+.fxhint{color:var(--muted);font-size:14px;margin:-4px 0 14px}
+.fxrow{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.fxrow:last-child{border-bottom:0}
+.fxrow .t{flex:1;min-width:0;text-align:right}
+.fxrow .t b{display:block;font-weight:700}
+.fxrow .t small{font-size:12px;color:var(--muted)}
+.fxrow .dpick{flex:none!important;display:flex;align-items:center;gap:6px;height:44px;padding:0 12px;border-radius:99px;background:var(--soft);font-weight:700;font-size:14px;color:var(--muted)}
+.fxrow .dpick.on{background:rgba(200,220,90,.14);color:var(--neon)}
+.fxrow .fxadd{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--neon);color:#11140d;transition:.2s}
+.fxrow .fxadd .i{width:22px;height:22px}
+.fxrow .fxadd:disabled{background:var(--soft);color:var(--muted)}
 .dayblk{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px 14px 8px;margin-bottom:12px}
 .dayblk.now{border-color:rgba(138,155,63,.45);box-shadow:inset 0 0 0 1px rgba(138,155,63,.15)}
 .dayhd{display:flex;align-items:baseline;gap:8px;padding:10px 2px 8px;border-bottom:1px solid var(--line)}
@@ -369,6 +387,8 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
 </svg>
 
@@ -410,6 +430,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 
   <section id="v-tasks" class="view hidden">
     <h2>המשימות שלי</h2>
+    <div id="fixedBox"></div>
     <div class="seg tmode" id="tMode"><button data-tm="days">לפי ימים</button><button data-tm="all">כל המשימות</button></div>
     <div class="fbar"><button class="fbtn hidden" id="fltBtn"></button><button class="fbtn hidden" id="fltReset">איפוס</button></div>
     <div class="fpanel hidden" id="fltPanel"></div>
@@ -685,6 +706,7 @@ const calSig = (d, m) => d + '|' + (m ?? '');
 const freqLabel = (t) => t.on_day ? 'חד פעמי · ' + dateLabel(t.on_day) : t.per_week ? (t.kind === 'dont' ? 'מותר עד ' : '') + (t.per_week === 1 ? 'פעם בשבוע' : `${t.per_week} פעמים בשבוע`) : daysLabel(t.days);
 function renderTasks() {
   const el = $('#allList');
+  drawFixed();
   $('#tMode').classList.toggle('hidden', !S.tasks.length);
   document.querySelectorAll('#tMode button').forEach(b => b.classList.toggle('on', b.dataset.tm === tMode));
   if (!S.tasks.length) { el.innerHTML = `<div class="empty">${icon('list')}<div>אין עדיין משימות. מה אתה מחייב את עצמך לעשות כל יום?</div></div>`; return; }
@@ -778,14 +800,67 @@ function renderByDay(el) {
   el.innerHTML = html;
   bindSwipe(el, '.drow');
 }
+// תיקיית משימות קבועות: בוחרים תאריך ולוחצים פלוס – נוספת משימה לאותו יום
+function drawFixed() {
+  const list = S.me.presets || [], box = $('#fixedBox');
+  box.innerHTML = list.length ? `<button class="fxfold fade" id="fxOpen">${icon('folder')}<span class="t"><b>משימות קבועות</b><span>${list.length === 1 ? 'משימה אחת' : list.length + ' משימות'} · בוחרים יום ומוסיפים</span></span><svg class="i ch"><use href="#i-chev"/></svg></button>` : '';
+  if (list.length) $('#fxOpen').onclick = openFixed;
+}
+function openFixed() {
+  const list = S.me.presets || [], pick = {};
+  if (!list.length) return closeSheet();
+  openSheet(`<div class="tform"><h2>משימות קבועות</h2><div class="fxhint">בחר תאריך ולחץ פלוס. המשימה תופיע רק באותו יום.</div>
+    ${list.map((p, i) => `<div class="fxrow"><button class="t" data-fe="${i}"><b>${esc(p.title)}</b><small>${p.by_min != null ? 'עד ' + hm(p.by_min) + ' · ' : ''}${p.kind === 'dont' ? 'לא לעשות' : 'לעשות'} · לחץ לעריכה</small></button>
+      <label class="dpick" id="fxD${i}">${icon('today')}<em>תאריך</em><input type="date" min="${todayStr()}" data-fd="${i}"></label>
+      <button class="fxadd" data-fa="${i}" disabled aria-label="הוספה">${icon('plus')}</button></div>`).join('')}</div>`);
+  document.querySelectorAll('[data-fd]').forEach(inp => inp.onchange = () => {
+    const i = +inp.dataset.fd; pick[i] = inp.value || null;
+    $('#fxD' + i).classList.toggle('on', !!pick[i]); $('#fxD' + i + ' em').textContent = pick[i] ? dateLabel(pick[i]) : 'תאריך';
+    document.querySelector(`[data-fa="${i}"]`).disabled = !pick[i];
+  });
+  document.querySelectorAll('[data-fa]').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.fa, p = list[i], d = pick[i]; if (!d) return;
+    b.disabled = true;
+    try {
+      S = await api('/tasks', { method: 'POST', body: { title: p.title, kind: p.kind, days: '', per_week: null, by_min: p.by_min, on_day: d, note: p.note || '' } });
+      render(); toast(`${p.title} נוספה ל${dateLabel(d)}`);
+      pick[i] = null; $('#fxD' + i).classList.remove('on'); $('#fxD' + i + ' em').textContent = 'תאריך'; $('#fxD' + i + ' input').value = '';
+    } catch (e) { toast(e.message); b.disabled = false; }
+  });
+  document.querySelectorAll('[data-fe]').forEach(b => b.onclick = () => editFixed(+b.dataset.fe));
+}
+function editFixed(i) {
+  const list = S.me.presets || [], p = list[i], f = { kind: p.kind };
+  openSheet(`<div class="tform"><h2>עריכת משימה קבועה</h2>
+    <label class="field"><span>מה המשימה?</span><input class="inp" id="xTitle" maxlength="50" value="${esc(p.title)}"></label>
+    <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="xNote" maxlength="2000">${esc(p.note || '')}</textarea></div></div>
+    <div class="field"><span>סוג</span><div class="kcards" id="xKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
+    <label class="field"><span>שעה קבועה</span><input class="inp" type="time" id="xBy" value="${p.by_min != null ? hm(p.by_min) : '20:00'}"></label>
+    <div class="err" id="xErr"></div>
+    <button class="btn" id="fSave">שמירה</button>
+    <button class="btn danger" style="margin-top:8px" id="xDel">מחיקה מהתיקייה</button>
+    <button class="btn ghost" style="margin-top:8px" id="xBack">חזרה לתיקייה</button></div>`);
+  const draw = () => document.querySelectorAll('#xKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
+  document.querySelectorAll('#xKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
+  draw();
+  const save = async (next, msg) => { try { S = await api('/presets', { method: 'PUT', body: { presets: next } }); render(); toast(msg); openFixed(); } catch (e) { $('#xErr').textContent = e.message; } };
+  $('#fSave').onclick = () => {
+    const by = parseTime($('#xBy').value), title = $('#xTitle').value.trim();
+    if (!title) return $('#xErr').textContent = 'כתוב מה המשימה';
+    if (by === null || Number.isNaN(by)) return $('#xErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
+    save(list.map((x, j) => j === i ? { title, kind: f.kind, by_min: by, note: $('#xNote').value } : x), 'נשמר');
+  };
+  $('#xDel').onclick = () => save(list.filter((_, j) => j !== i), 'נמחקה מהתיקייה');
+  $('#xBack').onclick = openFixed;
+}
 function editTask(t) {
   const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, dates: [t?.on_day || todayStr()] };
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
-    ${t ? '' : '<div class="field"><span>משימות קבועות</span><div class="pre" id="fPre"></div></div>'}
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
     <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
+    ${t ? '' : `<div class="field"><button class="ckrow" id="fFixed"><span class="ck">${icon('check')}</span>להגדיר כמשימה קבועה</button><div class="fxhint" id="fFixedHint" style="margin:6px 0 0">נשמרת בתיקייה "משימות קבועות", ומשם מוסיפים אותה לימים שבוחרים</div></div>`}
     <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">תאריך מדויק</button></div></div>
     <div class="field" id="fDateWrap"><span>באילו תאריכים (אפשר לבחור כמה)</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
       <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value=""></label></div><div class="dsel" id="fDateSel"></div></div>
@@ -822,8 +897,15 @@ function editTask(t) {
     $('#fAlarm').classList.toggle('hidden', !f.hasBy || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
     $('#fCalWrap').classList.toggle('hidden', !once || f.dates.length !== 1 || ad.cal === calSig(f.dates[0], tm)); $('#fCal').classList.toggle('on', !!f.cal);
     $('#fNWrap').classList.toggle('hidden', !wk);
-    $('#fByWrap').classList.toggle('hidden', dont && wk);
+    $('#fByWrap').classList.toggle('hidden', dont && wk && !f.fixed);
+    // משימה קבועה: רק שם, סוג, שעה ופירוט – התאריכים נבחרים מהתיקייה
+    if ($('#fFixed')) {
+      $('#fFixed').classList.toggle('on', !!f.fixed); $('#fFixedHint').classList.toggle('hidden', !f.fixed);
+      if (f.fixed) { ['#fModeWrap', '#fDateWrap', '#fCalWrap', '#fDaysWrap', '#fNWrap', '#fAlarm', '#fImgs'].forEach(q => $(q).classList.add('hidden')); $('#fByLbl').textContent = 'שעה קבועה'; $('#fSave').textContent = 'שמירה בתיקייה'; }
+      else { $('#fModeWrap').classList.remove('hidden'); $('#fImgs').classList.remove('hidden'); $('#fSave').textContent = 'הוספה'; }
+    }
   };
+  if ($('#fFixed')) $('#fFixed').onclick = () => { f.fixed = !f.fixed; draw(); };
   document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
@@ -864,39 +946,21 @@ function editTask(t) {
       }
     };
   };
-  // משימות קבועות: לחיצה ממלאת את הטופס, ואתה בוחר מתי
-  let preEdit = false, preNew = false, preOn = -1;
-  const drawPre = () => {
-    const el = $('#fPre'); if (!el) return;
-    const list = S.me.presets || [];
-    el.innerHTML = list.map((p, i) => `<button data-p="${i}" class="${i === preOn ? 'on' : ''} ${preEdit ? 'ed' : ''}">${esc(p.title)}${preEdit ? icon('x') : ''}</button>`).join('') +
-      (preEdit ? '<button class="pa" id="fPreDone">סיום</button>' : '<button class="pa" id="fPreAdd">' + icon('plus') + 'חדשה</button>' + (list.length ? '<button class="pa" id="fPreEd">עריכה</button>' : '')) +
-      (preNew ? '<div class="pnew"><input class="inp" id="fPreName" maxlength="50" placeholder="שם המשימה הקבועה"><button class="btn" id="fPreSave">שמירה</button><button class="pa" id="fPreCancel">ביטול</button></div>' : '');
-    el.querySelectorAll('[data-p]').forEach(b => b.onclick = async () => {
-      const i = +b.dataset.p, p = list[i];
-      if (preEdit) { try { S = await api('/presets', { method: 'PUT', body: { presets: list.filter((_, j) => j !== i) } }); } catch (e) { toast(e.message); } preOn = -1; return drawPre(); }
-      preOn = i; $('#fTitle').value = p.title; $('#fNote').value = p.note || ''; f.kind = p.kind;
-      if (p.by_min != null) $('#fBy').value = hm(p.by_min);
-      drawPre(); draw();
-    });
-    const add = $('#fPreAdd'); if (add) add.onclick = () => { preNew = true; drawPre(); setTimeout(() => $('#fPreName')?.focus(), 50); };
-    const sv = $('#fPreSave'); if (sv) sv.onclick = async () => {
-      const title = $('#fPreName').value.trim();
-      if (!title) return $('#fPreName').focus();
-      const next = [...list.filter(x => x.title !== title), { title, kind: 'do', by_min: null, note: null }];
-      try { S = await api('/presets', { method: 'PUT', body: { presets: next } }); preNew = false; toast('נוספה משימה קבועה'); } catch (e) { toast(e.message); }
-      drawPre();
-    };
-    const nm = $('#fPreName'); if (nm) nm.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); sv.click(); } };
-    const cn = $('#fPreCancel'); if (cn) cn.onclick = () => { preNew = false; drawPre(); };
-    const ed = $('#fPreEd'); if (ed) ed.onclick = () => { preEdit = true; drawPre(); };
-    const dn = $('#fPreDone'); if (dn) dn.onclick = () => { preEdit = false; drawPre(); };
-  };
-  drawPre();
   drawImgs();
   draw();
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
   $('#fSave').onclick = async () => {
+    if (f.fixed) {
+      const by = parseTime($('#fBy').value), title = $('#fTitle').value.trim();
+      if (!title) return $('#fErr').textContent = 'כתוב מה המשימה';
+      if (by === null) return $('#fErr').textContent = 'בחר שעה';
+      if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
+      const list = S.me.presets || [];
+      $('#fSave').disabled = true;
+      try { S = await api('/presets', { method: 'PUT', body: { presets: [...list, { title, kind: f.kind, by_min: by, note: $('#fNote').value }] } }); closeSheet(); render(); toast('נשמרה במשימות קבועות'); }
+      catch (e) { $('#fErr').textContent = e.message; }
+      $('#fSave').disabled = false; return;
+    }
     const once = f.once, wk = f.week && !once;
     const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
     if (by === null && !(f.kind === 'dont' && wk)) return $('#fErr').textContent = 'בחר שעה';

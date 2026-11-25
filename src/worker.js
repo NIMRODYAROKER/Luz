@@ -449,7 +449,7 @@ export class LuzDB extends DurableObject {
     }
     if (path === '/api/state' && method === 'GET') return json(this.state(u));
 
-    // משימות קבועות: כפתורי קיצור בטופס "משימה חדשה"
+    // משימות קבועות: התיקייה במסך המשימות
     if (path === '/api/presets' && method === 'PUT') {
       const list = Array.isArray(body.presets) ? body.presets : bad('בקשה לא תקינה');
       if (list.length > MAX_PRESETS) bad(`אפשר עד ${MAX_PRESETS} משימות קבועות`);
@@ -558,14 +558,16 @@ export class LuzDB extends DurableObject {
   }
 }
 
-const MAX_PRESETS = 12, DEFAULT_PRESETS = [{ title: 'עבודה', kind: 'do', by_min: null, note: null }];
-function readPresets(v) { try { const a = v ? JSON.parse(v) : null; return Array.isArray(a) ? a : DEFAULT_PRESETS; } catch { return DEFAULT_PRESETS; } }
+// משימות קבועות (התיקייה במסך המשימות): תבנית שממנה מוסיפים משימה לתאריך שבוחרים.
+// v:2 – הכפתורים הישנים מהטופס לא עוברים (המשתמש ביקש להתחיל מחדש)
+const MAX_PRESETS = 12;
+function readPresets(v) { try { const a = v ? JSON.parse(v) : null; return Array.isArray(a) ? a.filter(p => p && p.v === 2) : []; } catch { return []; } }
 function cleanPreset(b) {
   if (!b || typeof b !== 'object') bad('בקשה לא תקינה');
   const title = norm(b.title, 50);
   if (!title) bad('כתוב שם למשימה הקבועה');
   const by_min = b.by_min == null || b.by_min === '' ? null : intIn(b.by_min, 0, 1439, null);
-  return { title, kind: b.kind === 'dont' ? 'dont' : 'do', by_min, note: b.note ? String(b.note).slice(0, 300) : null };
+  return { v: 2, title, kind: b.kind === 'dont' ? 'dont' : 'do', by_min, note: cleanNote(b.note) };
 }
 function cleanTask(b) {
   const title = norm(b.title, 50);
