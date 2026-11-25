@@ -268,6 +268,9 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .dayblk.now .dayhd b{color:var(--olive2)}
 .dayhd span{color:var(--muted);font-size:13px}
 .dayhd em{margin-inline-start:auto;font-style:normal;font-size:12px;font-weight:700;color:var(--muted)}
+.dayhd .dadd{flex:none;align-self:center;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(200,220,90,.14);color:var(--neon)}
+.dayhd em:empty+.dadd{margin-inline-start:auto}
+.dayhd .dadd .i{width:18px;height:18px}
 .drow{display:flex;align-items:center;gap:12px;width:100%;text-align:right;padding:11px 2px;border-bottom:1px solid var(--line)}
 .drow:last-child{border-bottom:0}
 .drow .tm{flex:none;width:50px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14px;font-weight:700;color:var(--khaki);direction:ltr;text-align:center}
@@ -794,11 +797,12 @@ function renderByDay(el) {
     const d = x.toISOString().slice(0, 10), dow = x.getUTCDay();
     const list = S.tasks.filter(t => t.on_day ? t.on_day === d : !t.per_week && t.days.includes(String(dow))).sort(byTime);
     const name = i === 0 ? 'היום' : i === 1 ? 'מחר' : 'יום ' + DAY_NAMES[dow];
-    html += `<div class="dayblk ${i === 0 ? 'now' : ''}"><div class="dayhd"><b>${name}</b><span>${i < 2 ? DAY_NAMES[dow] + ', ' : ''}${x.getUTCDate()}.${x.getUTCMonth() + 1}</span><em>${list.length === 1 ? 'משימה אחת' : list.length ? list.length + ' משימות' : ''}</em></div>` +
+    html += `<div class="dayblk ${i === 0 ? 'now' : ''}"><div class="dayhd"><b>${name}</b><span>${i < 2 ? DAY_NAMES[dow] + ', ' : ''}${x.getUTCDate()}.${x.getUTCMonth() + 1}</span><em>${list.length === 1 ? 'משימה אחת' : list.length ? list.length + ' משימות' : ''}</em>${(S.me.presets || []).length ? `<button class="dadd" data-dadd="${d}" aria-label="הוספת משימה קבועה">${icon('plus')}</button>` : ''}</div>` +
       (list.length ? list.map(t => row(t, d)).join('') : '<div class="dfree">יום פנוי</div>') + '</div>';
   }
   el.innerHTML = html;
   bindSwipe(el, '.drow');
+  el.querySelectorAll('[data-dadd]').forEach(b => b.onclick = () => pickFixed(b.dataset.dadd));
 }
 // תיקיית משימות קבועות: בוחרים תאריך ולוחצים פלוס – נוספת משימה לאותו יום
 function drawFixed() {
@@ -812,22 +816,35 @@ function openFixed() {
   openSheet(`<div class="tform"><h2>משימות קבועות</h2><div class="fxhint">בחר תאריך ולחץ פלוס. המשימה תופיע רק באותו יום.</div>
     ${list.map((p, i) => `<div class="fxrow"><button class="t" data-fe="${i}"><b>${esc(p.title)}</b><small>${p.by_min != null ? 'עד ' + hm(p.by_min) + ' · ' : ''}${p.kind === 'dont' ? 'לא לעשות' : 'לעשות'} · לחץ לעריכה</small></button>
       <label class="dpick" id="fxD${i}">${icon('today')}<em>תאריך</em><input type="date" min="${todayStr()}" data-fd="${i}"></label>
-      <button class="fxadd" data-fa="${i}" disabled aria-label="הוספה">${icon('plus')}</button></div>`).join('')}</div>`);
-  document.querySelectorAll('[data-fd]').forEach(inp => inp.onchange = () => {
+      <button class="fxadd" data-fa="${i}" aria-label="הוספה">${icon('plus')}</button></div>`).join('')}</div>`);
+  document.querySelectorAll('[data-fd]').forEach(inp => inp.oninput = inp.onchange = () => {
     const i = +inp.dataset.fd; pick[i] = inp.value || null;
     $('#fxD' + i).classList.toggle('on', !!pick[i]); $('#fxD' + i + ' em').textContent = pick[i] ? dateLabel(pick[i]) : 'תאריך';
-    document.querySelector(`[data-fa="${i}"]`).disabled = !pick[i];
   });
   document.querySelectorAll('[data-fa]').forEach(b => b.onclick = async () => {
-    const i = +b.dataset.fa, p = list[i], d = pick[i]; if (!d) return;
+    const i = +b.dataset.fa, p = list[i], d = pick[i] || $('#fxD' + i + ' input').value;
+    if (!d) return toast('בחר קודם תאריך');
     b.disabled = true;
     try {
-      S = await api('/tasks', { method: 'POST', body: { title: p.title, kind: p.kind, days: '', per_week: null, by_min: p.by_min, on_day: d, note: p.note || '' } });
-      render(); toast(`${p.title} נוספה ל${dateLabel(d)}`);
+      await addFixed(p, d); b.disabled = false;
       pick[i] = null; $('#fxD' + i).classList.remove('on'); $('#fxD' + i + ' em').textContent = 'תאריך'; $('#fxD' + i + ' input').value = '';
     } catch (e) { toast(e.message); b.disabled = false; }
   });
   document.querySelectorAll('[data-fe]').forEach(b => b.onclick = () => editFixed(+b.dataset.fe));
+}
+async function addFixed(p, d) {
+  S = await api('/tasks', { method: 'POST', body: { title: p.title, kind: p.kind, days: '', per_week: null, by_min: p.by_min, on_day: d, note: p.note || '' } });
+  render(); toast(`${p.title} נוספה ל${dateLabel(d)}`);
+}
+// בתצוגה לפי ימים: פלוס ליד כל יום – בוחרים משימה קבועה והיא נוספת לאותו יום
+function pickFixed(d) {
+  const list = S.me.presets || [];
+  openSheet(`<div class="tform"><h2>הוספה ל${dateLabel(d)}</h2><div class="fxhint">בחר משימה קבועה</div>
+    ${list.map((p, i) => `<div class="fxrow"><button class="t" data-pf="${i}"><b>${esc(p.title)}</b><small>${p.by_min != null ? 'עד ' + hm(p.by_min) + ' · ' : ''}${p.kind === 'dont' ? 'לא לעשות' : 'לעשות'}</small></button>
+      <button class="fxadd" data-pf="${i}" aria-label="הוספה">${icon('plus')}</button></div>`).join('')}</div>`);
+  document.querySelectorAll('[data-pf]').forEach(b => b.onclick = async () => {
+    try { await addFixed(list[+b.dataset.pf], d); closeSheet(); } catch (e) { toast(e.message); }
+  });
 }
 function editFixed(i) {
   const list = S.me.presets || [], p = list[i], f = { kind: p.kind };
