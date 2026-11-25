@@ -178,6 +178,7 @@ export class LuzDB extends DurableObject {
     addCol('checks', 'n INTEGER NOT NULL DEFAULT 1');
     addCol('users', 'remind_min INTEGER NOT NULL DEFAULT 540', 'UPDATE users SET remind_min = remind_from * 60');
     addCol('users', 'quiet_min INTEGER NOT NULL DEFAULT 1380', 'UPDATE users SET quiet_min = quiet_from * 60');
+    addCol('users', 'presets TEXT');
     this.sql.exec('DELETE FROM sessions WHERE created < ?', Date.now() - SESSION_DAYS * 864e5);
   }
   secLog(kind, who, ip) {
@@ -281,7 +282,7 @@ export class LuzDB extends DurableObject {
     }
     return {
       me: { email: u.email, gate: u.gate_key, remind_min: u.remind_min, remind_every: u.remind_every, quiet_min: u.quiet_min,
-        pushCount: this.one('SELECT COUNT(*) AS c FROM subs WHERE user_id = ?', u.id).c },
+        pushCount: this.one('SELECT COUNT(*) AS c FROM subs WHERE user_id = ?', u.id).c, presets: readPresets(u.presets) },
       today: { day: l.day, dow: l.dow, hour: l.hour, min: l.min, checks: r.checks, locked: this.locked(u, l),
         tasks: r.tasks.map(t => ({ ...pub(t), ...(t.per_week ? t.kind === 'dont' ? { week_used: t.used } : { must: t.must, week_done: t.before + (r.checks[t.id] === 'done' ? 1 : 0) } : {}) })) },
       tasks: all.map(pub), week, ...this.streak(u)
@@ -448,6 +449,14 @@ export class LuzDB extends DurableObject {
     }
     if (path === '/api/state' && method === 'GET') return json(this.state(u));
 
+    // משימות קבועות: כפתורי קיצור בטופס "משימה חדשה"
+    if (path === '/api/presets' && method === 'PUT') {
+      const list = Array.isArray(body.presets) ? body.presets : bad('בקשה לא תקינה');
+      if (list.length > MAX_PRESETS) bad(`אפשר עד ${MAX_PRESETS} משימות קבועות`);
+      const clean = list.map(cleanPreset);
+      this.sql.exec('UPDATE users SET presets = ? WHERE id = ?', JSON.stringify(clean), u.id);
+      return json(this.state({ ...u, presets: JSON.stringify(clean) }));
+    }
     if (path === '/api/tasks' && method === 'POST') {
       const t = cleanTask(body);
       this.closeOnce(u.id);
@@ -549,6 +558,15 @@ export class LuzDB extends DurableObject {
   }
 }
 
+const MAX_PRESETS = 12, DEFAULT_PRESETS = [{ title: 'עבודה', kind: 'do', by_min: null, note: null }];
+function readPresets(v) { try { const a = v ? JSON.parse(v) : null; return Array.isArray(a) ? a : DEFAULT_PRESETS; } catch { return DEFAULT_PRESETS; } }
+function cleanPreset(b) {
+  if (!b || typeof b !== 'object') bad('בקשה לא תקינה');
+  const title = norm(b.title, 50);
+  if (!title) bad('כתוב שם למשימה הקבועה');
+  const by_min = b.by_min == null || b.by_min === '' ? null : intIn(b.by_min, 0, 1439, null);
+  return { title, kind: b.kind === 'dont' ? 'dont' : 'do', by_min, note: b.note ? String(b.note).slice(0, 300) : null };
+}
 function cleanTask(b) {
   const title = norm(b.title, 50);
   if (!title) bad('כתוב מה המשימה');

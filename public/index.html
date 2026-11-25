@@ -149,6 +149,15 @@ a.btn{text-decoration:none}
 .dsel .i{width:14px;height:14px;opacity:.7}
 .dpick em{font-style:normal;white-space:nowrap}
 .dpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;-webkit-appearance:none;appearance:none}
+.pre{display:flex;flex-wrap:wrap;gap:8px}
+.pre button{display:flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;background:var(--bg2);border:1px solid var(--line2);font-weight:700;font-size:15px;color:var(--text);transition:.2s}
+.pre button .i{width:15px;height:15px}
+.pre button.on{background:var(--neon);border-color:var(--neon);color:#11140d;box-shadow:0 0 16px rgba(200,220,90,.35)}
+.pre button.ed{border-color:#ff6a3d;color:#f08a68}
+.pnew{display:flex;gap:8px;width:100%;align-items:center}
+.pnew .inp{flex:1}
+.pre .pnew .btn{width:auto;padding:0 18px;height:48px;margin:0;background:var(--neon);border-color:var(--neon);color:#11140d}
+.pre button.pa{background:transparent;border-style:dashed;color:var(--olive2);font-size:14px}
 .kcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kcards button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:12px;background:var(--bg2);border:1.5px solid var(--line2);text-align:right;transition:.2s}
 .kcards button .i{width:26px;height:26px;color:var(--muted)}
@@ -773,6 +782,7 @@ function editTask(t) {
   const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, dates: [t?.on_day || todayStr()] };
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
+    ${t ? '' : '<div class="field"><span>משימות קבועות</span><div class="pre" id="fPre"></div></div>'}
     <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
     <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
     <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
@@ -854,6 +864,35 @@ function editTask(t) {
       }
     };
   };
+  // משימות קבועות: לחיצה ממלאת את הטופס, ואתה בוחר מתי
+  let preEdit = false, preNew = false, preOn = -1;
+  const drawPre = () => {
+    const el = $('#fPre'); if (!el) return;
+    const list = S.me.presets || [];
+    el.innerHTML = list.map((p, i) => `<button data-p="${i}" class="${i === preOn ? 'on' : ''} ${preEdit ? 'ed' : ''}">${esc(p.title)}${preEdit ? icon('x') : ''}</button>`).join('') +
+      (preEdit ? '<button class="pa" id="fPreDone">סיום</button>' : '<button class="pa" id="fPreAdd">' + icon('plus') + 'חדשה</button>' + (list.length ? '<button class="pa" id="fPreEd">עריכה</button>' : '')) +
+      (preNew ? '<div class="pnew"><input class="inp" id="fPreName" maxlength="50" placeholder="שם המשימה הקבועה"><button class="btn" id="fPreSave">שמירה</button><button class="pa" id="fPreCancel">ביטול</button></div>' : '');
+    el.querySelectorAll('[data-p]').forEach(b => b.onclick = async () => {
+      const i = +b.dataset.p, p = list[i];
+      if (preEdit) { try { S = await api('/presets', { method: 'PUT', body: { presets: list.filter((_, j) => j !== i) } }); } catch (e) { toast(e.message); } preOn = -1; return drawPre(); }
+      preOn = i; $('#fTitle').value = p.title; $('#fNote').value = p.note || ''; f.kind = p.kind;
+      if (p.by_min != null) $('#fBy').value = hm(p.by_min);
+      drawPre(); draw();
+    });
+    const add = $('#fPreAdd'); if (add) add.onclick = () => { preNew = true; drawPre(); setTimeout(() => $('#fPreName')?.focus(), 50); };
+    const sv = $('#fPreSave'); if (sv) sv.onclick = async () => {
+      const title = $('#fPreName').value.trim();
+      if (!title) return $('#fPreName').focus();
+      const next = [...list.filter(x => x.title !== title), { title, kind: 'do', by_min: null, note: null }];
+      try { S = await api('/presets', { method: 'PUT', body: { presets: next } }); preNew = false; toast('נוספה משימה קבועה'); } catch (e) { toast(e.message); }
+      drawPre();
+    };
+    const nm = $('#fPreName'); if (nm) nm.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); sv.click(); } };
+    const cn = $('#fPreCancel'); if (cn) cn.onclick = () => { preNew = false; drawPre(); };
+    const ed = $('#fPreEd'); if (ed) ed.onclick = () => { preEdit = true; drawPre(); };
+    const dn = $('#fPreDone'); if (dn) dn.onclick = () => { preEdit = false; drawPre(); };
+  };
+  drawPre();
   drawImgs();
   draw();
   if (!t) setTimeout(() => $('#fTitle').focus(), 350);
