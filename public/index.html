@@ -1037,21 +1037,35 @@ async function enablePush() {
   try {
     if (await Notification.requestPermission() !== 'granted') return toast('צריך לאשר התראות כדי שזה יעבוד');
     const reg = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
-    const { key } = await api('/push/key');
-    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)), c => c.charCodeAt(0));
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
-    await api('/push/subscribe', { body: { sub: sub.toJSON() } });
+    await registerSub(reg, false);
     await load(); toast('התראות הופעלו');
     api('/push/test', { body: {} }).catch(() => {});
   } catch (e) { toast(e.message || 'לא הצלחתי להפעיל התראות'); }
 }
+// רושם את המכשיר בשרת. fresh = מבטל את ההרשמה הישנה ויוצר חדשה (כשההרשמה הישנה מתה)
+async function registerSub(reg, fresh) {
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && fresh) { await sub.unsubscribe().catch(() => {}); sub = null; }
+  if (!sub) {
+    const { key } = await api('/push/key');
+    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)), c => c.charCodeAt(0));
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+  }
+  await api('/push/subscribe', { body: { sub: sub.toJSON() } });
+}
 $('#pushBtn').onclick = enablePush;
-$('#pushTest').onclick = async () => { try { const r = await api('/push/test', { body: {} }); toast(r.sent ? 'נשלחה' : 'לא נשלחה – נסה להפעיל מחדש'); } catch (e) { toast(e.message); } };
-// אם ההתראות כבר מאושרות, מוודאים שהמכשיר רשום
+// בדיקה: אם לא נשלחה, מחדשים את ההרשמה במכשיר ושולחים שוב
+$('#pushTest').onclick = async () => {
+  try {
+    let r = await api('/push/test', { body: {} });
+    if (!r.sent && pushOK) { await registerSub(await navigator.serviceWorker.ready, true); r = await api('/push/test', { body: {} }); load(); }
+    toast(r.sent ? 'נשלחה' : 'לא נשלחה – נסה להפעיל מחדש');
+  } catch (e) { toast(e.message); }
+};
+// בכל כניסה, אם ההתראות מאושרות: מוודאים שההרשמה של המכשיר הזה קיימת ורשומה בשרת (אייפון לפעמים מוחק אותה בשקט)
 async function syncPush() {
-  if (!pushOK || Notification.permission !== 'granted' || !S || S.me.pushCount) return;
-  try { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) { await api('/push/subscribe', { body: { sub: sub.toJSON() } }); load(); } } catch {}
+  if (!pushOK || Notification.permission !== 'granted' || !S) return;
+  try { const reg = await navigator.serviceWorker.ready; await registerSub(reg, false); if (!S.me.pushCount) load(); } catch {}
 }
 $('#gateBtn').onclick = () => {
   const url = location.origin + '/api/gate/' + S.me.gate;
