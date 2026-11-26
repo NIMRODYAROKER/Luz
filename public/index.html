@@ -329,6 +329,96 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
 .tform .ckrow .ck{border:0;background:rgba(214,201,154,.12)}
 .tform .ckrow.on .ck{box-shadow:none}
 .tform .btn#fSave{box-shadow:none;border-radius:16px}
+/* אשף משימה – 3 מסכים */
+.wiz{--nrgb:200,220,90}
+.wiz.dont{--neon:#ff7a4a;--nrgb:255,122,74}
+.wiz .field>span::before{display:none}
+.wiz .inp{caret-color:var(--neon)}
+.wiz .inp:focus{background:rgba(var(--nrgb),.08)}
+.wtop{margin:0 2px 14px}
+.wtop h2{margin:0;font-size:26px}
+.wkick{font-size:13px;color:var(--muted);margin-top:2px}
+.wkick b{color:var(--neon);font-family:ui-monospace,'SF Mono',Menlo,monospace;transition:color .35s}
+.wbar{display:flex;gap:6px;margin-bottom:24px}
+.wbar button{flex:1;display:flex;flex-direction:column;gap:8px;text-align:right;font-size:12px;font-weight:700;color:var(--muted);transition:color .35s}
+.wbar i{position:relative;display:block;height:4px;border-radius:9px;background:rgba(214,201,154,.1);overflow:hidden;transition:box-shadow .4s}
+.wbar i::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--neon);transform:scaleX(0);transform-origin:right;transition:transform .6s var(--ease),background .35s}
+.wbar .done i::after,.wbar .cur i::after{transform:none}
+.wbar .cur{color:var(--neon)}.wbar .done{color:var(--text)}
+.wbar .cur i{box-shadow:0 0 14px rgba(var(--nrgb),.5)}
+.wstep{display:none}
+.wstep.on{display:block;animation:wIn .5s var(--ease) both}
+.wiz.back .wstep.on{animation-name:wBack}
+.wstep.on>*{animation:wRise .55s var(--ease) both}
+.wstep.on>*:nth-child(2){animation-delay:.05s}.wstep.on>*:nth-child(3){animation-delay:.1s}.wstep.on>*:nth-child(4){animation-delay:.15s}
+.wstep.on>*:nth-child(5){animation-delay:.2s}.wstep.on>*:nth-child(6){animation-delay:.25s}.wstep.on>*:nth-child(7){animation-delay:.3s}
+.wiz .wsub{animation:wRise .45s var(--ease) both}
+@keyframes wIn{from{opacity:0;transform:translateX(-36px)}}
+@keyframes wBack{from{opacity:0;transform:translateX(36px)}}
+@keyframes wRise{from{opacity:0;transform:translateY(14px)}}
+.wq{font-family:var(--head);font-size:30px;line-height:1.15;margin:0 2px 18px;display:flex;align-items:center;gap:10px}
+.wq::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--neon);box-shadow:0 0 12px rgba(var(--nrgb),.8);transition:background .35s,box-shadow .35s}
+/* מסך 1 */
+.tcards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.tcards button{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;min-height:176px;padding:18px 16px;border-radius:24px;text-align:right;background:linear-gradient(165deg,rgba(214,201,154,.09),rgba(214,201,154,.02));box-shadow:inset 0 0 0 1px rgba(214,201,154,.07);transition:transform .25s var(--ease),box-shadow .4s,background .4s}
+.tcards button:active{transform:scale(.96)}
+.tcards button::before{content:"";position:absolute;width:190px;height:190px;left:-70px;top:-80px;border-radius:50%;background:radial-gradient(circle,rgba(var(--nrgb),.3),transparent 65%);opacity:0;transform:scale(.5);transition:opacity .5s,transform .7s var(--ease);pointer-events:none}
+.tcards button.on{background:linear-gradient(165deg,rgba(var(--nrgb),.17),rgba(var(--nrgb),.03));box-shadow:inset 0 0 0 1.5px var(--neon),0 16px 36px -18px rgba(var(--nrgb),.7)}
+.tcards button.on::before{opacity:1;transform:none}
+.tic{flex:none;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;background:rgba(214,201,154,.08);color:var(--khaki);transition:background .4s,color .4s,box-shadow .4s,transform .5s cubic-bezier(.3,1.5,.5,1)}
+.tic .i{width:26px;height:26px}
+.tcards .tic{margin-bottom:auto}
+.tcards button.on .tic{background:var(--neon);color:#11140d;box-shadow:0 0 22px rgba(var(--nrgb),.55);transform:rotate(-8deg) scale(1.06)}
+.tcards b{position:relative;font-family:var(--head);font-weight:400;font-size:23px;color:var(--text);margin-top:16px}
+.tcards small{position:relative;font-size:13px;color:var(--muted);margin-top:2px}
+.tcards .tok{position:absolute;top:14px;left:14px;width:26px;height:26px;border-radius:50%;background:var(--neon);color:#11140d;display:grid;place-items:center;transform:scale(0);transition:transform .4s cubic-bezier(.3,1.7,.5,1)}
+.tcards .tok .i{width:15px;height:15px;stroke-width:3.2}
+.tcards button.on .tok{transform:scale(1)}
+.dtog{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;width:100%;padding:14px;border-radius:20px;background:rgba(214,201,154,.05);text-align:right;transition:background .4s,box-shadow .4s}
+.dtog .tic{width:44px;height:44px;border-radius:14px}.dtog .tic .i{width:22px;height:22px}
+.dtog .dtx{flex:1}
+.dtog b{display:block;font-size:16px;color:var(--text)}
+.dtog small{font-size:13px;color:var(--muted)}
+.dtog.on{background:rgba(var(--nrgb),.1);box-shadow:inset 0 0 0 1px rgba(var(--nrgb),.45)}
+.dtog.on .tic{background:var(--neon);color:#11140d;box-shadow:0 0 18px rgba(var(--nrgb),.5)}
+.wiz .sw::after{transition:right .4s cubic-bezier(.3,1.5,.5,1),background .3s}
+.dtog.on .sw,.xrow.on .sw{background:var(--neon);box-shadow:0 0 14px rgba(var(--nrgb),.5)}
+.dtog.on .sw::after,.xrow.on .sw::after{right:23px;background:#11140d}
+/* מסך 2 */
+.wiz #fTitle{font-size:28px;padding:6px 2px 12px;margin-bottom:24px;transition:border-color .3s,box-shadow .3s}
+.wiz #fTitle:focus{border-bottom-color:var(--neon);box-shadow:0 10px 18px -16px rgba(var(--nrgb),1)}
+.wiz .notebox:focus-within{background:rgba(var(--nrgb),.07)}
+/* מסך 3 */
+.mopts{display:flex;flex-direction:column;gap:8px}
+.mopts button{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:rgba(214,201,154,.05);text-align:right;transition:background .35s,box-shadow .35s}
+.mopts button::before{content:"";flex:none;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line2);transition:box-shadow .4s var(--ease)}
+.mopts button.on{background:rgba(var(--nrgb),.1);box-shadow:inset 0 0 0 1px rgba(var(--nrgb),.4)}
+.mopts button.on::before{box-shadow:inset 0 0 0 7px var(--neon),0 0 14px rgba(var(--nrgb),.6)}
+.mopts span{flex:1}
+.mopts b{display:block;font-size:16px;color:var(--text)}
+.mopts small{font-size:12.5px;color:var(--muted)}
+.wiz .quick button{background:rgba(var(--nrgb),.1)}
+.wiz #fDays button{transition:background .3s,color .3s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+.wiz #fDays button.on{transform:scale(1.08);box-shadow:0 0 14px rgba(var(--nrgb),.45)}
+.wiz .dchips .on{box-shadow:0 0 16px rgba(var(--nrgb),.4)}
+.wiz .dpick.on em{color:#11140d}
+.wiz #fBy{font-size:42px;min-height:88px;border-radius:22px;background:rgba(var(--nrgb),.07);color:var(--neon);text-shadow:0 0 20px rgba(var(--nrgb),.5);letter-spacing:3px}
+.xrow{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:18px;background:rgba(214,201,154,.05);text-align:right;font-size:15px;color:var(--text);transition:background .35s}
+.xrow+.xrow{margin-top:8px}
+.xrow>.i{width:20px;height:20px;color:var(--khaki);transition:color .35s}
+.xrow>span:not(.sw){flex:1}
+.xrow.on{background:rgba(var(--nrgb),.1)}
+.xrow.on>.i{color:var(--neon)}
+.rip{position:absolute;border-radius:50%;background:rgba(var(--nrgb),.28);transform:scale(0);animation:rip .7s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+/* כפתורים למטה */
+.wnav{display:flex;gap:10px}
+.wback{flex:none;width:58px;border-radius:16px;background:rgba(214,201,154,.08);display:grid;place-items:center;color:var(--text);overflow:hidden;transition:width .4s var(--ease),opacity .3s,margin .4s var(--ease)}
+.wback .i{transform:scaleX(-1)}
+.wback.off{width:0;opacity:0;margin-left:-10px;pointer-events:none}
+.wiz .btn#fSave{flex:1;position:relative;overflow:hidden;background:var(--neon);box-shadow:0 12px 30px -14px rgba(var(--nrgb),.9);transition:background .35s,box-shadow .35s,transform .15s}
+.wiz.last .btn#fSave::after{content:"";position:absolute;top:0;bottom:0;width:45%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:shine 3.4s ease-in-out infinite}
+@keyframes shine{0%,55%{left:-60%}100%{left:130%}}
 
 /* ניווט תחתון */
 .nav{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
@@ -391,6 +481,7 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5;font-size:16px}
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V18a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l3 3-3 3M4 11V9a4 4 0 014-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 01-4 4H4"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
 </svg>
@@ -871,38 +962,76 @@ function editFixed(i) {
   $('#xBack').onclick = openFixed;
 }
 function editTask(t) {
-  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', week: !!t?.per_week, once: !!t?.on_day, n: t?.per_week || 3, hasBy: true, dates: [t?.on_day || todayStr()] };
+  // אשף ב-3 מסכים: 1 סוג (קבועה / חד פעמית + לא לעשות), 2 שם ופירוט, 3 מתי
+  const f = { title: t?.title || '', kind: t?.kind || 'do', days: t ? (t.per_week || t.on_day ? '' : t.days) : '', n: t?.per_week || 3, hasBy: true, dates: [t?.on_day || todayStr()],
+    type: t ? (t.on_day ? 'once' : 'fixed') : null, mode: t?.per_week ? 'week' : 'days', step: 1 };
+  const sync = () => { f.once = f.type === 'once'; f.fixed = !t && f.type === 'fixed' && f.mode === 'folder'; f.week = f.type === 'fixed' && f.mode === 'week'; };
+  sync();
   const plusDay = (n) => { const d = new Date(todayStr() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-  openSheet(`<div class="tform"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2>
-    <label class="field"><span>מה המשימה?</span><input class="inp" id="fTitle" maxlength="50" placeholder="למשל: אימון, לקום עד 9, לשלוח קו״ח" value="${esc(f.title)}"></label>
-    <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" placeholder="פרטים, רשימה, קישור – מה שתרצה">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
-    <div class="field"><span>סוג</span><div class="kcards" id="fKind"><button data-k="do">${icon('check')}<b>לעשות</b><small>משהו שאני מתחייב לעשות</small></button><button data-k="dont" class="dont">${icon('shield')}<b>לא לעשות</b><small>משהו שאני נמנע ממנו</small></button></div></div>
-    ${t ? '' : `<div class="field"><button class="ckrow" id="fFixed"><span class="ck">${icon('check')}</span>להגדיר כמשימה קבועה</button><div class="fxhint" id="fFixedHint" style="margin:6px 0 0">נשמרת בתיקייה "משימות קבועות", ומשם מוסיפים אותה לימים שבוחרים</div></div>`}
-    <div class="field" id="fModeWrap"><span>מתי</span><div class="tabs" id="fMode"><button data-m="days">ימים קבועים</button><button data-m="week" id="fWeekBtn">כמה פעמים בשבוע</button><button data-m="once">תאריך מדויק</button></div></div>
-    <div class="field" id="fDateWrap"><span>באילו תאריכים (אפשר לבחור כמה)</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
-      <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value=""></label></div><div class="dsel" id="fDateSel"></div></div>
-    <div class="field" id="fCalWrap"><button class="ckrow" id="fCal"><span class="ck">${icon('check')}</span>להוסיף גם ליומן באייפון</button></div>
-    <div class="field" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
-      <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
-    <div class="field" id="fNWrap"><span id="fNLbl"></span><div class="stepper"><button id="fNPlus" aria-label="עוד">+</button><div><b id="fNNum"></b><small>בשבוע</small></div><button id="fNMinus" aria-label="פחות">−</button></div></div>
-    <div class="field" id="fByWrap"><span id="fByLbl"></span>
-      <input class="inp" type="time" id="fBy" value="${t?.by_min != null ? hm(t.by_min) : '20:00'}">
-      <button class="ckrow" id="fAlarm" style="margin-top:8px"><span class="ck">${icon('check')}</span>להוסיף גם שעון מעורר באייפון</button></div>
+  openSheet(`<div class="tform wiz" id="wiz">
+    <div class="wtop"><h2>${t ? 'עריכת משימה' : 'משימה חדשה'}</h2><div class="wkick">שלב <b id="wNum">1</b> מתוך 3</div></div>
+    <div class="wbar">${['סוג', 'פרטים', 'מתי'].map((s, i) => `<button data-go="${i + 1}"><i></i><span>${s}</span></button>`).join('')}</div>
+    <section class="wstep" data-s="1">
+      <div class="wq">איזו משימה?</div>
+      <div class="tcards" id="fType">
+        <button data-t="fixed"><span class="tic">${icon('repeat')}</span><b>קבועה</b><small>חוזרת שוב ושוב</small><span class="tok">${icon('check')}</span></button>
+        <button data-t="once"><span class="tic">${icon('today')}</span><b>חד פעמית</b><small>ביום אחד מסוים</small><span class="tok">${icon('check')}</span></button>
+      </div>
+      <button class="dtog" id="fDont"><span class="tic">${icon('shield')}</span><span class="dtx"><b>משימה של "לא לעשות"</b><small id="fDontSub"></small></span><span class="sw"></span></button>
+    </section>
+    <section class="wstep" data-s="2">
+      <div class="wq">מה המשימה?</div>
+      <input class="inp" id="fTitle" maxlength="50" value="${esc(f.title)}" aria-label="שם המשימה" autocomplete="off">
+      <div class="field"><span>פירוט (לא חובה)</span><div class="notebox"><textarea class="inp" id="fNote" maxlength="2000" aria-label="פירוט">${esc(t?.note || '')}</textarea><div class="nimgs" id="fImgs"></div></div></div>
+    </section>
+    <section class="wstep" data-s="3">
+      <div class="wq">מתי?</div>
+      <div class="field" id="fModeWrap"><div class="mopts" id="fMode">
+        <button data-m="days"><span><b>ימים קבועים</b><small>באותם ימים בכל שבוע</small></span></button>
+        <button data-m="week"><span><b id="fWeekLbl"></b><small id="fWeekSub"></small></span></button>
+        ${t ? '' : `<button data-m="folder"><span><b>בתיקייה</b><small>נשמרת בתיקייה, ומוסיפים אותה לימים שבוחרים</small></span></button>`}
+      </div></div>
+      <div class="field wsub" id="fDaysWrap"><span>באילו ימים</span><div class="days" id="fDays">${DAYS.map((d, i) => `<button data-d="${i}">${d}</button>`).join('')}</div>
+        <div class="quick"><button data-q="0123456">כל יום</button><button data-q="01234">א׳–ה׳</button><button data-q="56">סופ״ש</button></div></div>
+      <div class="field wsub" id="fNWrap"><span id="fNLbl"></span><div class="stepper"><button id="fNPlus" aria-label="עוד">+</button><div><b id="fNNum"></b><small>בשבוע</small></div><button id="fNMinus" aria-label="פחות">−</button></div></div>
+      <div class="field wsub" id="fDateWrap"><span>באיזה תאריך (אפשר לבחור כמה)</span><div class="dchips"><button data-dd="0">היום</button><button data-dd="1">מחר</button>
+        <label class="dpick" id="fDatePick">${icon('today')}<em id="fDateLbl">תאריך אחר</em><input type="date" id="fDate" min="${todayStr()}" value=""></label></div><div class="dsel" id="fDateSel"></div></div>
+      <div class="field wsub" id="fByWrap"><span id="fByLbl"></span>
+        <input class="inp" type="time" id="fBy" value="${t?.by_min != null ? hm(t.by_min) : '20:00'}"></div>
+      <div class="field wsub" id="fXWrap"><span>תוספות</span>
+        <button class="xrow" id="fCal">${icon('today')}<span>להוסיף ליומן באייפון</span><span class="sw"></span></button>
+        <button class="xrow" id="fAlarm">${icon('bell')}<span>להוסיף שעון מעורר באייפון</span><span class="sw"></span></button></div>
+    </section>
     <div class="err" id="fErr"></div>
-    <button class="btn" id="fSave">${t ? 'שמירה' : 'הוספה'}</button>
-    ${t ? '<button class="btn danger" style="margin-top:8px" id="fDel">מחיקת המשימה</button>' : ''}</div>`);
+    <div class="wnav"><button class="wback" id="wBack" aria-label="חזרה">${icon('chev')}</button><button class="btn" id="fSave"></button></div>
+    ${t ? '<button class="btn danger" style="margin-top:10px" id="fDel">מחיקת המשימה</button>' : ''}</div>`);
   const draw = () => {
-    document.querySelectorAll('#fKind button').forEach(b => b.classList.toggle('on', b.dataset.k === f.kind));
-    const wk = f.week && !f.once, dont = f.kind === 'dont', once = f.once;
+    sync();
+    const wk = f.week, dont = f.kind === 'dont', once = f.once, last = f.step === 3;
     if (!dont && f.n > 6) f.n = 6;
-    $('#fWeekBtn').textContent = dont ? 'מוגבל בשבוע' : 'כמה בשבוע';
-    $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע (אתה בוחר באילו ימים)';
-    $('#fByLbl').textContent = dont ? 'עד איזו שעה (אחריה זה הצלחה)' : 'עד איזו שעה';
+    $('#wiz').classList.toggle('dont', dont); $('#wiz').classList.toggle('last', last);
+    document.querySelectorAll('.wstep').forEach(s => s.classList.toggle('on', +s.dataset.s === f.step));
+    document.querySelectorAll('.wbar button').forEach(b => { const n = +b.dataset.go; b.classList.toggle('done', n < f.step); b.classList.toggle('cur', n === f.step); });
+    $('#wNum').textContent = f.step;
+    $('#wBack').classList.toggle('off', f.step === 1);
+    $('#fSave').textContent = !last ? 'המשך' : f.fixed ? 'שמירה בתיקייה' : t ? 'שמירה' : 'הוספה';
+    if ($('#fDel')) $('#fDel').classList.toggle('hidden', !last);
+    // מסך 1
+    document.querySelectorAll('#fType button').forEach(b => b.classList.toggle('on', b.dataset.t === f.type));
+    $('#fDont').classList.toggle('on', dont);
+    $('#fDontSub').textContent = dont ? 'משהו שאני נמנע ממנו' : 'כבוי: משימה שצריך לעשות';
+    // מסך 3
+    $('#fWeekLbl').textContent = dont ? 'מוגבל בשבוע' : 'כמה בשבוע';
+    $('#fWeekSub').textContent = dont ? 'עד מספר פעמים בשבוע' : 'מספר פעמים, אתה בוחר באילו ימים';
+    $('#fNLbl').textContent = dont ? 'מקסימום פעמים בשבוע (תלחץ כל פעם שעשית)' : 'כמה פעמים בשבוע';
+    $('#fByLbl').textContent = f.fixed ? 'שעה קבועה' : dont ? 'עד איזו שעה (אחריה זה הצלחה)' : 'עד איזו שעה';
     const maxN = dont ? 7 : 6;
     $('#fNNum').textContent = f.n; $('#fNPlus').disabled = f.n >= maxN; $('#fNMinus').disabled = f.n <= 1;
-    document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.m === (once ? 'once' : wk ? 'week' : 'days')));
+    document.querySelectorAll('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.m === f.mode));
     document.querySelectorAll('#fDays button').forEach(b => b.classList.toggle('on', f.days.includes(b.dataset.d)));
-    $('#fDaysWrap').classList.toggle('hidden', wk || once);
+    $('#fModeWrap').classList.toggle('hidden', once);
+    $('#fDaysWrap').classList.toggle('hidden', once || f.mode !== 'days');
+    $('#fNWrap').classList.toggle('hidden', !wk);
     $('#fDateWrap').classList.toggle('hidden', !once);
     f.dates.sort();
     document.querySelectorAll('#fDateWrap button[data-dd]').forEach(b => b.classList.toggle('on', f.dates.includes(plusDay(+b.dataset.dd))));
@@ -910,20 +1039,39 @@ function editTask(t) {
     $('#fDatePick').classList.toggle('on', other.length > 0); $('#fDateLbl').textContent = other.length ? 'עוד תאריך' : 'תאריך אחר';
     $('#fDateSel').innerHTML = f.dates.length > 1 || other.length ? f.dates.map(d => `<button data-rd="${d}">${dateLabel(d)}${icon('x')}</button>`).join('') : '';
     document.querySelectorAll('#fDateSel button').forEach(b => b.onclick = () => { dDef = false; f.dates = f.dates.filter(d => d !== b.dataset.rd); draw(); });
-    const tm = f.hasBy ? parseTime($('#fBy').value) : null, ad = t ? getAdded(t.id) : {};
-    $('#fAlarm').classList.toggle('hidden', !f.hasBy || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
-    $('#fCalWrap').classList.toggle('hidden', !once || f.dates.length !== 1 || ad.cal === calSig(f.dates[0], tm)); $('#fCal').classList.toggle('on', !!f.cal);
-    $('#fNWrap').classList.toggle('hidden', !wk);
-    $('#fByWrap').classList.toggle('hidden', dont && wk && !f.fixed);
-    // משימה קבועה: רק שם, סוג, שעה ופירוט – התאריכים נבחרים מהתיקייה
-    if ($('#fFixed')) {
-      $('#fFixed').classList.toggle('on', !!f.fixed); $('#fFixedHint').classList.toggle('hidden', !f.fixed);
-      if (f.fixed) { ['#fModeWrap', '#fDateWrap', '#fCalWrap', '#fDaysWrap', '#fNWrap', '#fAlarm', '#fImgs'].forEach(q => $(q).classList.add('hidden')); $('#fByLbl').textContent = 'שעה קבועה'; $('#fSave').textContent = 'שמירה בתיקייה'; }
-      else { $('#fModeWrap').classList.remove('hidden'); $('#fImgs').classList.remove('hidden'); $('#fSave').textContent = 'הוספה'; }
-    }
+    const noBy = dont && wk, tm = noBy ? null : parseTime($('#fBy').value), ad = t ? getAdded(t.id) : {};
+    $('#fByWrap').classList.toggle('hidden', noBy);
+    $('#fAlarm').classList.toggle('hidden', noBy || f.fixed || ad.alarm === tm); $('#fAlarm').classList.toggle('on', !!f.alarm);
+    $('#fCal').classList.toggle('hidden', !once || f.dates.length !== 1 || ad.cal === calSig(f.dates[0], tm)); $('#fCal').classList.toggle('on', !!f.cal);
+    $('#fXWrap').classList.toggle('hidden', $('#fAlarm').classList.contains('hidden') && $('#fCal').classList.contains('hidden'));
   };
-  if ($('#fFixed')) $('#fFixed').onclick = () => { f.fixed = !f.fixed; draw(); };
-  document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.week = b.dataset.m === 'week'; f.once = b.dataset.m === 'once'; draw(); });
+  const err = (m) => { $('#fErr').textContent = m || ''; };
+  const go = (n) => {
+    if (n > f.step || n > 1) {
+      if (n > 1 && !f.type) { if (f.step !== 1) go(1); return err('בחר אם המשימה קבועה או חד פעמית'); }
+      if (n > 2 && !$('#fTitle').value.trim()) { if (f.step !== 2) go(2); return err('כתוב מה המשימה'); }
+    }
+    err(); $('#wiz').classList.toggle('back', n < f.step); f.step = n; draw();
+    $('#sheet').scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  document.querySelectorAll('.wbar button').forEach(b => b.onclick = () => go(+b.dataset.go));
+  $('#wBack').onclick = () => go(Math.max(1, f.step - 1));
+  // בחירת סוג מעבירה לבד למסך הבא
+  document.querySelectorAll('#fType button').forEach(b => b.onclick = () => {
+    const first = !f.type; f.type = b.dataset.t; err(); draw();
+    if (first || !t) setTimeout(() => { if (f.step === 1) go(2); }, 320);
+  });
+  $('#fDont').onclick = () => { f.kind = f.kind === 'dont' ? 'do' : 'dont'; draw(); };
+  $('#fTitle').oninput = () => err();
+  $('#fTitle').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#fTitle').blur(); go(3); } };
+  // אפקט גל בלחיצה
+  $('#wiz').addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.tcards button,.mopts button,.xrow,.dtog'); if (!b) return;
+    const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2.2, el = document.createElement('span');
+    el.className = 'rip'; el.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+    b.appendChild(el); setTimeout(() => el.remove(), 700);
+  });
+  document.querySelectorAll('#fMode button').forEach(b => b.onclick = () => { f.mode = b.dataset.m; err(); draw(); });
   $('#fNPlus').onclick = () => { f.n = Math.min(f.n + 1, f.kind === 'dont' ? 7 : 6); draw(); };
   $('#fNMinus').onclick = () => { f.n = Math.max(f.n - 1, 1); draw(); };
   // היום מסומן רק כברירת מחדל – הבחירה הראשונה של המשתמש מחליפה אותו ולא מתווספת אליו
@@ -931,14 +1079,13 @@ function editTask(t) {
   const togDate = (d) => { if (dDef) { dDef = false; if (d !== f.dates[0]) f.dates = []; } f.dates = f.dates.includes(d) ? f.dates.filter(x => x !== d) : [...f.dates, d]; draw(); };
   document.querySelectorAll('#fDateWrap button[data-dd]').forEach(b => b.onclick = () => togDate(plusDay(+b.dataset.dd)));
   $('#fDate').onchange = () => { const v = $('#fDate').value; if (v && !f.dates.includes(v)) togDate(v); $('#fDate').value = ''; };
-  document.querySelectorAll('#fKind button').forEach(b => b.onclick = () => { f.kind = b.dataset.k; draw(); });
   $('#fAlarm').onclick = () => { f.alarm = !f.alarm; draw(); };
   $('#fCal').onclick = () => { f.cal = !f.cal; draw(); };
   $('#fBy').oninput = draw;
   document.querySelectorAll('#fDays button').forEach(b => b.onclick = () => {
-    const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); draw();
+    const d = b.dataset.d; f.days = f.days.includes(d) ? f.days.replace(d, '') : [...f.days, d].sort().join(''); err(); draw();
   });
-  document.querySelectorAll('.quick button').forEach(b => b.onclick = () => { f.days = b.dataset.q; draw(); });
+  document.querySelectorAll('.quick button').forEach(b => b.onclick = () => { f.days = b.dataset.q; err(); draw(); });
   // תמונות: במשימה קיימת עולות מיד, במשימה חדשה מחכות לשמירה
   const imgs = [...(t?.imgs || [])], wait = [];
   const drawImgs = () => {
@@ -965,8 +1112,7 @@ function editTask(t) {
   };
   drawImgs();
   draw();
-  if (!t) setTimeout(() => $('#fTitle').focus(), 350);
-  $('#fSave').onclick = async () => {
+  const doSave = async () => {
     if (f.fixed) {
       const by = parseTime($('#fBy').value), title = $('#fTitle').value.trim();
       if (!title) return $('#fErr').textContent = 'כתוב מה המשימה';
@@ -974,11 +1120,12 @@ function editTask(t) {
       if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
       const list = S.me.presets || [];
       $('#fSave').disabled = true;
-      try { S = await api('/presets', { method: 'PUT', body: { presets: [...list, { title, kind: f.kind, by_min: by, note: $('#fNote').value }] } }); closeSheet(); render(); toast('נשמרה במשימות קבועות'); }
+      try { S = await api('/presets', { method: 'PUT', body: { presets: [...list, { title, kind: f.kind, by_min: by, note: $('#fNote').value }] } }); closeSheet(); render(); toast(wait.length ? 'נשמרה בתיקייה (בלי התמונות)' : 'נשמרה במשימות קבועות'); }
       catch (e) { $('#fErr').textContent = e.message; }
       $('#fSave').disabled = false; return;
     }
     const once = f.once, wk = f.week && !once;
+    if (f.type === 'fixed' && f.mode === 'days' && !f.days) return $('#fErr').textContent = 'בחר לפחות יום אחד';
     const by = f.kind === 'dont' && wk ? null : parseTime($('#fBy').value);
     if (by === null && !(f.kind === 'dont' && wk)) return $('#fErr').textContent = 'בחר שעה';
     if (Number.isNaN(by)) return $('#fErr').textContent = 'השעה לא תקינה. כתוב למשל 14:30';
@@ -1011,6 +1158,7 @@ function editTask(t) {
     }
     catch (e) { $('#fErr').textContent = e.message; $('#fSave').disabled = false; }
   };
+  $('#fSave').onclick = () => f.step < 3 ? go(f.step + 1) : doSave();
   if (t) $('#fDel').onclick = async () => {
     if (!confirmDel.armed) { confirmDel.armed = true; $('#fDel').textContent = 'לחץ שוב למחיקה'; setTimeout(() => confirmDel.armed = false, 3000); return; }
     confirmDel.armed = false;
